@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold text-center mb-6 text-white">Registrar Reparación</h1>
+
+    <!-- Formulario de Reparación -->
+    <form class="bg-gray-800 shadow-md rounded-xl px-8 pt-6 pb-8 mb-8" method="POST" action="{{ url_for('reparaciones') }}">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+            <i data-lucide="clipboard-edit" class="w-6 h-6"></i> Registrar Reparación
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+            <!-- Tipo de Reparación -->
+            <div>
+                <label for="tipo_reparacion" class="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-1">
+                    <i data-lucide="wrench" class="w-4 h-4"></i> Tipo de Reparación
+                </label>
+                <select id="tipo_reparacion" name="tipo_reparacion" class="w-full rounded-lg bg-gray-700 text-gray-300 border border-gray-600 py-2 px-3 focus:outline-none">
+                    <option value="modulo">Módulo</option>
+                    <option value="Virus">Virus</option>
+                    <option value="pin de carga">Pin de Carga</option>
+                    <option value="Tratamiento humedad">Tratamiento humedad</option>
+                    <option value="glass">Glass</option>
+                    <option value="Soft">Soft</option>
+                    <option value="Bateria">Batería</option>
+                    <option value="otros">Otros</option>
+                    <option value="Garantia">Garantia</option>
+                </select>
+            </div>
+            <div>
+                <label for="observaciones" class="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-1">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Observaciones
+                </label>
+                <textarea id="observaciones" name="observaciones" placeholder="Observaciones sobre la reparación"
+                        class="w-full rounded-lg bg-gray-700 text-white border border-gray-600 py-2 px-3 focus:outline-none"
+                        rows="3"></textarea>
+            </div>
+    
+            <!-- Equipo -->
+            <div>
+                <label for="equipo" class="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-1">
+                    <i data-lucide="smartphone" class="w-4 h-4"></i> Equipo
+                </label>
+                <select id="equipo" name="equipo" class="w-full rounded-lg bg-gray-700 text-gray-300 border border-gray-600 py-2 px-3 focus:outline-none">
+                    <option value="alcatel">Alcatel</option>
+                    <option value="huawei">Huawei</option>
+                    <option value="iphone">iPhone</option>
+                    <option value="lg">LG</option>
+                    <option value="motorola">Motorola</option>
+                    <option value="nokia">Nokia</option>
+                    <option value="samsung">Samsung</option>
+                    <option value="tcl">TCL</option>
+                    <option value="xiaomi">Xiaomi</option>                    
+                </select>
+            </div>
+    
+            <!-- Modelo -->
+            <div>
+                <label for="modelo" class="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-1">
+                    <i data-lucide="type" class="w-4 h-4"></i> Modelo
+                </label>
+                <input type="text" id="modelo" name="modelo" placeholder="Ingrese el modelo" class="w-full rounded-lg bg-gray-700 text-white border border-gray-600 py-2 px-3 focus:outline-none">
+            </div>
+    
+            <!-- Técnico -->
+            <div>
+                <label for="tecnico" class="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-1">
+                    <i data-lucide="user-cog" class="w-4 h-4"></i> Técnico
+                </label>
+                <select id="tecnico" name="tecnico" class="w-full rounded-lg bg-gray-700 text-gray-300 border border-gray-600 py-2 px-3 focus:outline-none">
+                    <option value="pablo">Pablo</option>
+                    <option value="lucas">Lucas</option>
+                    <option value="Jose Maria">Jose Maria</option>
+                    <option value="GADIEL">GADIEL</option>
+                    <option value="CELL FOUR">CELL FOUR</option>
+                    <option value="otro">Otro</option>
+                </select>
+            </div>
+    
+            <!-- Monto -->
+            <div>
+                <label for="monto" class="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-1">
+                    <i data-lucide="dollar-sign" class="w-4 h-4"></i> Monto
+                </label>
+                <input type="number" id="monto" name="monto" placeholder="Ingrese el monto" class="w-full rounded-lg bg-gray-700 text-white border border-gray-600 py-2 px-3 focus:outline-none">
+            </div>
+    
+            <!-- Nombre del Cliente -->
+            <div>
+                <label for="nombre_cliente" class="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-1">
+                    <i data-lucide="user" class="w-4 h-4"></i> Nombre del Cliente
+                </label>
+                <input type="text" id="nombre_cliente" name="nombre_cliente" placeholder="Ingrese el nombre del cliente" class="w-full rounded-lg bg-gray-700 text-white border border-gray-600 py-2 px-3 focus:outline-none">
+            </div>
+            
+
+    
+            <!-- Teléfono -->
+            <div>
+                <label for="telefono" class="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-1">
+                    <i data-lucide="phone" class="w-4 h-4"></i> Número de Teléfono
+                </label>
+                <input type="tel" id="telefono" name="telefono" placeholder="Ingrese el número de teléfono" class="w-full rounded-lg bg-gray-700 text-white border border-gray-600 py-2 px-3 focus:outline-none">
+            </div>
+    
+            <!-- Número de Orden 
+            <div>
+                <label for="nro_orden" class="text-sm font-semibold text-gray-300 flex items-center gap-2 mb-1">
+                    <i data-lucide="hash" class="w-4 h-4"></i> Número de Orden
+                </label>
+                <input type="text" id="nro_orden" name="nro_orden" placeholder="Ingrese el número de orden" class="w-full rounded-lg bg-gray-700 text-white border border-gray-600 py-2 px-3 focus:outline-none">
+            </div>-->
+        </div>
+    
+        <!-- Botón de Enviar -->
+        <div class="mt-8">
+            <button type="submit" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg transition duration-300">
+                <i data-lucide="save" class="w-5 h-5"></i> Registrar Reparación
+            </button>
+        </div>
+    </form>
+    
+
+        <!-- Filtro de Fecha -->
+        <div class="bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <h2 class="text-xl font-bold text-center mb-6 text-white">Filtrar por Fecha</h2>
+            <form method="GET" action="{{ url_for('reparaciones') }}" class="flex flex-wrap justify-center gap-4">
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2" for="fecha_desde">
+                        Desde
+                    </label>
+                    <input type="date" id="fecha_desde" name="fecha_desde" class="shadow appearance-none border rounded py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline" value="{{ fecha_desde }}">
+                </div>
+                <div>
+                    <label class="block text-gray-300 text-sm font-bold mb-2" for="fecha_hasta">
+                        Hasta
+                    </label>
+                    <input type="date" id="fecha_hasta" name="fecha_hasta" class="shadow appearance-none border rounded py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline" value="{{ fecha_hasta }}">
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Resumen de Equipos por Técnico -->
+        <!-- Resumen de Equipos por Técnico -->
+        <div class="bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <h2 class="text-xl font-bold text-center mb-6 text-white">Equipos por Técnico</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for tecnico, cantidad in equipos_por_tecnico.items() %}
+                <div class="bg-gray-700 p-4 rounded-lg flex items-center gap-4">
+                    <i data-lucide="user-cog" class="text-cyan-400 w-6 h-6"></i>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">{{ tecnico }}</h3>
+                        <p class="text-gray-300">Equipos asignados: {{ cantidad }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        
+
+        <!-- Resumen de Equipos por Estado -->
+<div class="bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <h2 class="text-xl font-bold text-center mb-6 text-white">Resumen por Estado</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="bg-gray-700 p-4 rounded-lg flex items-center gap-4">
+            <i data-lucide="wrench" class="text-yellow-400 w-6 h-6"></i>
+            <div>
+                <h3 class="text-lg font-semibold text-white">Por Reparar</h3>
+                <p class="text-gray-300">Cantidad: {{ estados.por_reparar }}</p>
+            </div>
+        </div>
+        <div class="bg-gray-700 p-4 rounded-lg flex items-center gap-4">
+            <i data-lucide="settings" class="text-blue-400 w-6 h-6"></i>
+            <div>
+                <h3 class="text-lg font-semibold text-white">En Reparación</h3>
+                <p class="text-gray-300">Cantidad: {{ estados.en_reparacion }}</p>
+            </div>
+        </div>
+        <div class="bg-gray-700 p-4 rounded-lg flex items-center gap-4">
+            <i data-lucide="check-circle" class="text-green-400 w-6 h-6"></i>
+            <div>
+                <h3 class="text-lg font-semibold text-white">Listo</h3>
+                <p class="text-gray-300">Cantidad: {{ estados.listo }}</p>
+            </div>
+        </div>
+        <div class="bg-gray-700 p-4 rounded-lg flex items-center gap-4">
+            <i data-lucide="truck" class="text-purple-400 w-6 h-6"></i>
+            <div>
+                <h3 class="text-lg font-semibold text-white">Retirado</h3>
+                <p class="text-gray-300">Cantidad: {{ estados.retirado }}</p>
+            </div>
+        </div>
+        <div class="bg-gray-700 p-4 rounded-lg flex items-center gap-4">
+            <i data-lucide="database" class="text-teal-400 w-6 h-6"></i>
+            <div>
+                <h3 class="text-lg font-semibold text-white">Total Equipos</h3>
+                <p class="text-gray-300">Cantidad: {{ estados.total }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-6 mt-8 shadow-lg">
+  <h2 class="text-xl text-white font-bold mb-4 flex items-center gap-2">
+    <i data-lucide="wrench"></i> Resumen por Tipo de Reparación
+  </h2>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {% for tipo in resumen_tipo %}
+        <div class="bg-gray-700 text-white rounded-lg p-4 shadow-md flex flex-col items-center justify-center text-center">
+            <i class="w-6 h-6 mb-2" data-lucide="{% if tipo.tipo_reparacion|lower == 'modulo' %}phone{% 
+            elif tipo.tipo_reparacion|lower == 'bateria' %}battery-full{%
+            elif tipo.tipo_reparacion|lower == 'pin de carga' %}plug{%
+            elif tipo.tipo_reparacion|lower == 'garantia' %}shield-check{%
+            elif tipo.tipo_reparacion|lower == 'tratamiento humedad' %}droplet{%
+            elif tipo.tipo_reparacion|lower == 'virus' %}bug{%
+            elif tipo.tipo_reparacion|lower == 'glass' %}scan-line{%
+            elif tipo.tipo_reparacion|lower == 'soft' %}file-cog{%
+            else %}alert-triangle{% endif %}"></i>
+
+            <span class="text-sm font-medium capitalize">{{ tipo.tipo_reparacion }}</span>
+            <span class="text-2xl font-bold">{{ tipo.cantidad }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    </div>
+
+</div>
+
+
+        <!-- Últimos Teléfonos Cargados -->
+        <div class="bg-gray-800 shadow-md rounded px-4 md:px-8 pt-6 pb-8 mb-4">
+            <h2 class="text-xl font-bold text-center mb-6 text-white">Últimos Teléfonos Cargados</h2>
+        
+            <!-- Vista tipo tarjeta para móviles -->
+            <div class="md:hidden space-y-4">
+                {% for equipo in ultimos_equipos %}
+                    <div class="bg-gray-700 p-4 rounded-lg shadow">
+                        <p><strong>Tipo Reparación:</strong> {{ equipo.tipo_reparacion }}</p>
+                        <p><strong>Marca:</strong> {{ equipo.marca }}</p>
+                        <p><strong>Modelo:</strong> {{ equipo.modelo }}</p>
+                        <p><strong>Técnico:</strong> {{ equipo.tecnico }}</p>
+                        <p><strong>Monto:</strong> {{ equipo.monto }}</p>
+                        <p><strong>Cliente:</strong> {{ equipo.nombre_cliente }}</p>
+                        <p><strong>Teléfono:</strong> {{ equipo.telefono }}</p>
+                        <p><strong>N° Orden:</strong> {{ equipo.nro_orden }}</p>
+                        <p><strong>Fecha:</strong> {{ equipo.fecha }}</p>
+                        <p><strong>Observaciones:</strong> {{ equipo.observaciones }}</p>
+                        <div class="mb-2">
+                            <label class="block text-sm font-semibold mb-1">Estado:</label>
+                            <select class="estado-reparacion w-full bg-gray-800 text-white p-2 rounded" data-telefono="{{ equipo.telefono }}" data-nro-orden="{{ equipo.nro_orden }}">
+                                <option value="por_reparar" {% if equipo.estado == 'por_reparar' %}selected{% endif %}>Por reparar</option>
+                                <option value="en_reparacion" {% if equipo.estado == 'en_reparacion' %}selected{% endif %}>En reparación</option>
+                                <option value="listo" {% if equipo.estado == 'listo' %}selected{% endif %}>Listo</option>
+                                <option value="Retirado" {% if equipo.estado == 'Retirado' %}selected{% endif %}>Retirado</option>
+                                <option value="No salio" {% if equipo.estado == 'No salio' %}selected{% endif %}>No salió</option>
+                            </select>
+                        </div>
+                        <td class="border px-4 py-2">
+                            <div class="flex flex-col gap-2">
+
+                                <!-- Botón Comprobante -->
+                                <a href="{{ url_for('comprobante', nro_orden=equipo.nro_orden) }}" target="_blank"
+                                class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded flex items-center justify-center gap-1">
+                                <i data-lucide="file-text" class="w-4 h-4"></i> 
+                                </a>
+
+                                <!-- Botón Eliminar -->
+                                <form action="{{ url_for('eliminar_reparacion', id=equipo.id) }}" method="POST" 
+                                onsubmit="return confirm('¿Estás seguro de que deseas eliminar este equipo?');">
+                                <button type="submit"
+                                    class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded flex items-center justify-center gap-1">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i> 
+                                </button>
+                                </form>
+
+                                <!-- Botón Firmar -->
+                                <!-- Botón Editar -->
+                                <button type="button"
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded flex items-center justify-center gap-1"
+                                    onclick="abrirModalEditar(
+                                        {{ equipo.id }},
+                                        '{{ equipo.tipo_reparacion|escape }}',
+                                        '{{ equipo.marca|escape }}',
+                                        '{{ equipo.modelo|escape }}',
+                                        '{{ equipo.tecnico|escape }}',
+                                        '{{ equipo.monto }}',
+                                        '{{ equipo.nombre_cliente|escape }}',
+                                        '{{ equipo.telefono|escape }}',
+                                        `{{ equipo.observaciones|default('', true)|escape }}`
+                                    )">
+                                    <i data-lucide="pen-line" class="w-4 h-4"></i> 
+                                </button>
+
+
+
+                            </div>
+                        </td>
+                    </div>
+                {% endfor %}
+            </div>
+        
+            <!-- Tabla visible en pantallas medianas o grandes -->
+                        <!-- Tabla visible en pantallas medianas o grandes -->
+            <div class="hidden md:block">
+            <table class="w-full table-auto bg-gray-700 text-gray-300 border border-gray-600 rounded-lg">
+                <thead class="bg-gray-800">
+                <tr>
+                    <th class="px-2 py-2 text-sm">Tipo Reparación</th>
+                    <th class="px-2 py-2 text-sm">Observaciones</th>
+                    <th class="px-2 py-2 text-sm">Marca</th>
+                    <th class="px-2 py-2 text-sm">Modelo</th>
+                    <th class="px-2 py-2 text-sm">Técnico</th>
+                    <th class="px-2 py-2 text-sm">Monto</th>
+                    <th class="px-2 py-2 text-sm">Cliente</th>
+                    <th class="px-2 py-2 text-sm">Teléfono</th>
+                    <th class="px-2 py-2 text-sm">N° Orden</th>
+                    <th class="px-2 py-2 text-sm">Fecha</th>
+                    <th class="px-2 py-2 text-sm">Estado</th>
+                    <th class="px-2 py-2 text-sm">Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for equipo in ultimos_equipos %}
+                <tr>
+                    <td class="border px-2 py-2 break-words">{{ equipo.tipo_reparacion }}</td>
+                    <td class="border px-2 py-2 break-words">{{ equipo.observaciones }}</td>
+                    <td class="border px-2 py-2 break-words">{{ equipo.marca }}</td>
+                    <td class="border px-2 py-2 break-words">{{ equipo.modelo }}</td>
+                    <td class="border px-2 py-2 break-words">{{ equipo.tecnico }}</td>
+                    <td class="border px-2 py-2">{{ equipo.monto }}</td>
+                    <td class="border px-2 py-2 break-words">{{ equipo.nombre_cliente }}</td>
+                    <td class="border px-2 py-2">{{ equipo.telefono }}</td>
+                    <td class="border px-2 py-2">{{ equipo.nro_orden }}</td>
+                    <td class="border px-2 py-2">{{ equipo.fecha }}</td>
+                    <td class="border px-2 py-2">
+                    <select class="estado-reparacion bg-gray-700 text-gray-300 rounded w-full"
+                        data-telefono="{{ equipo.telefono }}" data-nro-orden="{{ equipo.nro_orden }}">
+                        <option value="por_reparar" {% if equipo.estado == 'por_reparar' %}selected{% endif %}>Por reparar</option>
+                        <option value="en_reparacion" {% if equipo.estado == 'en_reparacion' %}selected{% endif %}>En reparación</option>
+                        <option value="listo" {% if equipo.estado == 'listo' %}selected{% endif %}>Listo</option>
+                        <option value="Retirado" {% if equipo.estado == 'Retirado' %}selected{% endif %}>Retirado</option>
+                        <option value="No salio" {% if equipo.estado == 'No salio' %}selected{% endif %}>No salió</option>
+                    </select>
+                    </td>
+                    <td class="border px-2 py-2">
+                    <div class="flex flex-col gap-2">
+                        <a href="{{ url_for('comprobante', nro_orden=equipo.nro_orden) }}" target="_blank"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded flex items-center justify-center gap-1">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        </a>
+                        <form action="{{ url_for('eliminar_reparacion', id=equipo.id) }}" method="POST"
+                        onsubmit="return confirm('¿Estás seguro de que deseas eliminar este equipo?');">
+                        <button type="submit"
+                            class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded flex items-center justify-center gap-1">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                        </form>
+                        <button type="button"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded flex items-center justify-center gap-1"
+                        onclick="abrirModalEditar(
+                            {{ equipo.id }},
+                            '{{ equipo.tipo_reparacion|escape }}',
+                            '{{ equipo.marca|escape }}',
+                            '{{ equipo.modelo|escape }}',
+                            '{{ equipo.tecnico|escape }}',
+                            '{{ equipo.monto }}',
+                            '{{ equipo.nombre_cliente|escape }}',
+                            '{{ equipo.telefono|escape }}',
+                            `{{ equipo.observaciones|default('', true)|escape }}`
+                        )">
+                        <i data-lucide="pen-line" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+
+
+        </div>
+    </div>
+
+<!-- Modal de Edición -->
+<div id="modal-editar" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-gray-800 p-6 rounded-lg w-full max-w-2xl">
+    <h2 class="text-xl font-bold mb-4 text-white">Editar Reparación</h2>
+    <form id="form-editar" method="POST" action="{{ url_for('editar_equipo') }}">
+      <input type="hidden" name="id" id="edit-id">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Tipo de Reparación -->
+        <div>
+          <label class="text-white font-semibold">Tipo de Reparación</label>
+          <select name="tipo_reparacion" id="edit-tipo" class="w-full rounded-lg bg-gray-700 text-white border border-gray-600 py-2 px-3">
+            <option value="modulo">Módulo</option>
+            <option value="Virus">Virus</option>
+            <option value="pin de carga">Pin de carga</option>
+            <option value="tratamiento humedad">Tratamiento humedad</option>
+            <option value="glass">Glass</option>
+            <option value="soft">Soft</option>
+            <option value="bateria">Batería</option>
+            <option value="otros">Otros</option>
+            <option value="Garantia">Garantia</option>
+          </select>
+        </div>
+
+        <!-- Observaciones -->
+        <div>
+          <label class="text-white font-semibold">Observaciones</label>
+          <textarea name="observaciones" id="edit-observaciones" rows="2" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600"></textarea>
+        </div>
+
+        <!-- Marca -->
+        <div>
+          <label class="text-white font-semibold">Equipo</label>
+          <select name="marca" id="edit-marca" class="w-full rounded-lg bg-gray-700 text-white border border-gray-600 py-2 px-3">
+            <option value="alcatel">Alcatel</option>
+            <option value="huawei">Huawei</option>
+            <option value="iphone">iPhone</option>
+            <option value="lg">LG</option>
+            <option value="motorola">Motorola</option>
+            <option value="nokia">Nokia</option>
+            <option value="samsung">Samsung</option>
+            <option value="tcl">TCL</option>
+            <option value="xiaomi">Xiaomi</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+
+        <!-- Modelo -->
+        <div>
+          <label class="text-white font-semibold">Modelo</label>
+          <input type="text" name="modelo" id="edit-modelo" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600">
+        </div>
+
+        <!-- Técnico -->
+        <div>
+          <label class="text-white font-semibold">Técnico</label>
+          <select name="tecnico" id="edit-tecnico" class="w-full rounded-lg bg-gray-700 text-white border border-gray-600 py-2 px-3">
+            <option value="pablo">Pablo</option>
+            <option value="lucas">Lucas</option>
+            <option value="jose maria">Jose Maria</option>
+            <option value="GADIEL">GADIEL</option>
+            <option value="CELL FOUR">CELL FOUR</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+
+        <!-- Monto -->
+        <div>
+          <label class="text-white font-semibold">Monto</label>
+          <input type="number" name="monto" id="edit-monto" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600">
+        </div>
+
+        <!-- Nombre del Cliente -->
+        <div>
+          <label class="text-white font-semibold">Nombre del Cliente</label>
+          <input type="text" name="nombre_cliente" id="edit-cliente" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600">
+        </div>
+
+        <!-- Teléfono -->
+        <div>
+          <label class="text-white font-semibold">Número de Teléfono</label>
+          <input type="text" name="telefono" id="edit-telefono" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600">
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" onclick="cerrarModalEditar()" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-4 rounded">Cancelar</button>
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-4 rounded">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+    <!-- Script para manejar el cambio de estado y enviar WhatsApp -->
+    <script>
+        document.querySelectorAll('.estado-reparacion').forEach(select => {
+            select.addEventListener('change', function() {
+                const estado = this.value;
+                const telefono = this.getAttribute('data-telefono');
+                const nroOrden = this.getAttribute('data-nro-orden');
+
+                if (estado === 'listo') {
+                    // Mensaje de WhatsApp
+                    const mensaje = `Hola, Nos comunicamos de Servicell tu equipo con número de orden ${nroOrden} está listo para ser retirado. ¡Gracias por confiar en nosotros!`;
+                    const urlWhatsApp = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+
+                    // Abrir WhatsApp en una nueva pestaña
+                    window.open(urlWhatsApp, '_blank');
+                }
+
+                // Aquí puedes agregar una llamada a tu backend para actualizar el estado en la base de datos
+                fetch('/actualizar_estado', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nro_orden: nroOrden,
+                        estado: estado
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Estado actualizado:', data);
+                })
+                .catch(error => {
+                    console.error('Error al actualizar el estado:', error);
+                });
+            });
+        });
+    </script>
+<script>
+  function setSelectByValue(selectId, value) {
+    const select = document.getElementById(selectId);
+    for (let option of select.options) {
+      if (option.value.toLowerCase().trim() === value.toLowerCase().trim()) {
+        option.selected = true;
+        break;
+      }
+    }
+  }
+
+  function abrirModalEditar(id, tipo, marca, modelo, tecnico, monto, cliente, telefono, observaciones = '') {
+    document.getElementById('edit-id').value = id;
+    setSelectByValue('edit-tipo', tipo);
+    setSelectByValue('edit-marca', marca);
+    setSelectByValue('edit-tecnico', tecnico);
+    document.getElementById('edit-modelo').value = modelo;
+    document.getElementById('edit-monto').value = monto;
+    document.getElementById('edit-cliente').value = cliente;
+    document.getElementById('edit-telefono').value = telefono;
+    document.getElementById('edit-observaciones').value = observaciones;
+    document.getElementById('modal-editar').classList.remove('hidden');
+  }
+
+  function cerrarModalEditar() {
+    document.getElementById('modal-editar').classList.add('hidden');
+  }
+</script>
+
+
+{% endblock %}
+
+
+

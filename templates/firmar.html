@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Firma del Cliente</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen text-center p-4">
+  <h1 class="text-xl font-semibold mb-4">Firme abajo, por favor</h1>
+  
+  <canvas id="canvas" width="300" height="150" class="border bg-white border-gray-400 rounded-md shadow-md mb-4"></canvas>
+  
+  <div class="flex gap-4 mb-4">
+    <button onclick="borrar()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Borrar</button>
+    <button onclick="enviarFirma()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Confirmar Firma</button>
+  </div>
+
+  <form id="firmaForm" method="POST" action="/guardar_firma">
+    <input type="hidden" name="nro_orden" value="{{ nro_orden }}">
+    <input type="hidden" name="firma" id="firma">
+  </form>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let dibujando = false;
+
+    function getPos(e) {
+      let rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left,
+        y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top
+      };
+    }
+
+    function empezar(e) {
+      dibujando = true;
+      let pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }
+
+    function mover(e) {
+      if (!dibujando) return;
+      let pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+
+    function terminar() {
+      dibujando = false;
+    }
+
+    canvas.addEventListener("mousedown", empezar);
+    canvas.addEventListener("mousemove", mover);
+    canvas.addEventListener("mouseup", terminar);
+    canvas.addEventListener("mouseout", terminar);
+
+    canvas.addEventListener("touchstart", empezar);
+    canvas.addEventListener("touchmove", mover);
+    canvas.addEventListener("touchend", terminar);
+
+    function borrar() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function enviarFirma() {
+      const dataURL = canvas.toDataURL();
+      document.getElementById('firma').value = dataURL;
+      document.getElementById('firmaForm').submit();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-6 bg-gray-900 text-white min-h-screen">
+    <h1 class="text-3xl font-bold text-center mb-8">Caja Diaria</h1>
+
+    <!-- Selector de fechas -->
+    <div class="mb-8">
+        <form method="get" action="{{ url_for('caja') }}" class="flex justify-center gap-4">
+            <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="bg-gray-800 text-white p-2 rounded-lg">
+            <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="bg-gray-800 text-white p-2 rounded-lg">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Filtrar</button>
+        </form>
+    </div>
+
+    <!-- Ingreso manual desde caja -->
+    <div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-800 p-6 rounded-lg">
+            <label for="caja_efectivo" class="block mb-2 text-lg">Efectivo contado en caja:</label>
+            <input type="number" step="0.01" id="caja_efectivo" class="w-full p-2 bg-gray-700 rounded">
+        </div>
+        <div class="bg-gray-800 p-6 rounded-lg">
+            <label for="caja_transferencia" class="block mb-2 text-lg">Transferencias vistas en cuenta:</label>
+            <input type="number" step="0.01" id="caja_transferencia" class="w-full p-2 bg-gray-700 rounded">
+        </div>
+    </div>
+
+    <!-- Validación de cierre -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-semibold mb-4">Validación de Cierre</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="val_efectivo" class="p-6 rounded-lg shadow-lg text-center bg-gray-800"></div>
+            <div id="val_transferencia" class="p-6 rounded-lg shadow-lg text-center bg-gray-800"></div>
+        </div>
+    </div>
+
+    <!-- KPIs de Neto por Tipo de Pago -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4">Neto por Tipo de Pago</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <!-- Efectivo -->
+            <div class="bg-gradient-to-r from-green-600 to-green-800 p-6 rounded-lg shadow-lg text-center">
+                <h3 class="text-xl font-semibold mb-2">Efectivo</h3>
+                <p class="text-3xl font-bold" id="efectivo_sistema">${{ neto_por_pago.get('Efectivo', 0) | round(2) }}</p>
+            </div>
+
+            <!-- Transferencias -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-800 p-6 rounded-lg shadow-lg text-center">
+                <h3 class="text-xl font-semibold mb-2">Transferencias</h3>
+                <p class="text-3xl font-bold" id="transferencia_sistema">${{ neto_por_pago.get('Transferencia', 0) | round(2) }}</p>
+            </div>
+
+            <!-- Tarjeta de Crédito -->
+            <div class="bg-gradient-to-r from-purple-600 to-purple-800 p-6 rounded-lg shadow-lg text-center">
+                <h3 class="text-xl font-semibold mb-2">Crédito</h3>
+                <p class="text-3xl font-bold">${{ neto_por_pago.get('Crédito', 0) | round(2) }}</p>
+            </div>
+
+            <!-- Tarjeta de Débito -->
+            <div class="bg-gradient-to-r from-yellow-600 to-yellow-800 p-6 rounded-lg shadow-lg text-center">
+                <h3 class="text-xl font-semibold mb-2">Débito</h3>
+                <p class="text-3xl font-bold">${{ neto_por_pago.get('Débito', 0) | round(2) }}</p>
+            </div>
+
+            <!-- Total General -->
+            <div class="bg-gradient-to-r from-gray-600 to-gray-800 p-6 rounded-lg shadow-lg text-center">
+                <h3 class="text-xl font-semibold mb-2">Total General</h3>
+                <p class="text-3xl font-bold">
+                    ${{ (
+                        neto_por_pago.get('Efectivo', 0) +
+                        neto_por_pago.get('Transferencia', 0) +
+                        neto_por_pago.get('Crédito', 0) +
+                        neto_por_pago.get('Débito', 0)
+                    ) | round(2) }}
+                </p>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Botón para volver al inicio -->
+    <div class="mt-8 text-center">
+        <a href="{{ url_for('index') }}" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-300">Volver al Inicio</a>
+    </div>
+</div>
+
+<!-- Scripts para Chart.js y validación -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const neto = {
+        Efectivo: {{ neto_por_pago.get('Efectivo', 0) | round(2) }},
+        Transferencia: {{ neto_por_pago.get('Transferencia', 0) | round(2) }}
+    };
+
+    function validarCaja() {
+        const efectivoCaja = parseFloat(localStorage.getItem('caja_efectivo') || 0);
+        const transferenciaCaja = parseFloat(localStorage.getItem('caja_transferencia') || 0);
+
+        const efectivoDiff = (efectivoCaja - neto.Efectivo).toFixed(2);
+        const transferenciaDiff = (transferenciaCaja - neto.Transferencia).toFixed(2);
+
+        document.getElementById('val_efectivo').innerHTML = `
+            <h3 class="text-xl font-semibold mb-2">Efectivo</h3>
+            <p class="text-2xl font-bold ${efectivoDiff == 0 ? 'text-white' : (efectivoDiff > 0 ? 'text-green-500' : 'text-red-500')}">
+                ${efectivoDiff == 0 ? 'Cierre correcto' : (efectivoDiff > 0 ? 'Sobra $' + efectivoDiff : 'Faltan $' + Math.abs(efectivoDiff))}
+            </p>`;
+
+        document.getElementById('val_transferencia').innerHTML = `
+            <h3 class="text-xl font-semibold mb-2">Transferencias</h3>
+            <p class="text-2xl font-bold ${transferenciaDiff == 0 ? 'text-white' : (transferenciaDiff > 0 ? 'text-green-500' : 'text-red-500')}">
+                ${transferenciaDiff == 0 ? 'Cierre correcto' : (transferenciaDiff > 0 ? 'Sobra $' + transferenciaDiff : 'Faltan $' + Math.abs(transferenciaDiff))}
+            </p>`;
+    }
+
+    document.getElementById('caja_efectivo').addEventListener('input', e => {
+        localStorage.setItem('caja_efectivo', e.target.value);
+        validarCaja();
+    });
+
+    document.getElementById('caja_transferencia').addEventListener('input', e => {
+        localStorage.setItem('caja_transferencia', e.target.value);
+        validarCaja();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('caja_efectivo').value = localStorage.getItem('caja_efectivo') || '';
+        document.getElementById('caja_transferencia').value = localStorage.getItem('caja_transferencia') || '';
+        validarCaja();
+
+        const ventasChart = new Chart(
+            document.getElementById('ventasChart'),
+            {
+                type: 'bar',
+                data: {
+                    labels: {{ neto_por_pago.keys() | list | tojson | safe }},
+                    datasets: [{
+                        label: 'Neto por Tipo de Pago',
+                        data: {{ neto_por_pago.values() | list | tojson | safe }},
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(153, 102, 255, 0.6)',
+                            'rgba(255, 206, 86, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 206, 86, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'white'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'white'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                }
+            }
+        );
+    });
+</script>
+{% endblock %}
