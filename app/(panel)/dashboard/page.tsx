@@ -14,7 +14,7 @@ import { LineChart } from "@/components/line-chart";
 import { getHolidayWeekHighlights } from "@/lib/argentina-holidays";
 import { requireSession } from "@/lib/auth";
 import { getDashboard } from "@/lib/data";
-import { formatCurrency, toInputDate } from "@/lib/utils";
+import { endOfWeekInput, formatCurrency, startOfWeekInput, toInputDate } from "@/lib/utils";
 
 function formatPercent(value: number) {
   return `${value.toFixed(1)}%`;
@@ -37,8 +37,8 @@ export default async function DashboardPage({
 
   const params = await searchParams;
   const today = toInputDate(new Date());
-  const fechaDesde = params.fecha_desde ?? today;
-  const fechaHasta = params.fecha_hasta ?? today;
+  const fechaDesde = params.fecha_desde ?? startOfWeekInput(today);
+  const fechaHasta = params.fecha_hasta ?? endOfWeekInput(today);
   const dashboard = await getDashboard(fechaDesde, fechaHasta);
   const ventasBase = dashboard.totalVentas || 1;
   const porcentajeEgresos = getPercent(dashboard.totalEgresos, ventasBase);

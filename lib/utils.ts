@@ -36,6 +36,15 @@ export function startOfWeekInput(value: Date | string) {
   return toInputDate(base);
 }
 
+export function endOfWeekInput(value: Date | string) {
+  const base =
+    typeof value === "string" ? new Date(`${value}T00:00:00`) : new Date(value.getTime());
+  const day = base.getDay();
+  const diff = day === 0 ? 0 : 7 - day;
+  base.setDate(base.getDate() + diff);
+  return toInputDate(base);
+}
+
 export function normalizeText(text: string) {
   return text
     .normalize("NFKD")
