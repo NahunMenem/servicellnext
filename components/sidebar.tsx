@@ -15,6 +15,7 @@ import {
   Package,
   ShoppingCart,
   Star,
+  Stethoscope,
   Wallet,
   Wrench,
   X,
@@ -34,7 +35,8 @@ const links = [
   { href: "/productos_mas_vendidos", label: "Top productos", Icon: Star },
   { href: "/productos_por_agotarse", label: "Por agotarse", Icon: AlertTriangle },
   { href: "/cotizar", label: "Cotizar", Icon: BadgeDollarSign },
-  { href: "/facturar", label: "Facturar", Icon: FileSpreadsheet }
+  { href: "/facturar", label: "Facturar", Icon: FileSpreadsheet },
+  { href: "/asignacion_manual", label: "Asignacion manual", Icon: Stethoscope }
 ];
 
 export function Sidebar({ username, role }: { username: string; role: string }) {

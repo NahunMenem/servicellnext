@@ -24,6 +24,10 @@ Copiar `.env.example` a `.env.local` y completar:
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/servicell
 SESSION_SECRET=change-this-secret
 FACTURADOR_URL=
+MONITOREO_API_URL=
+MONITOREO_API_TOKEN=
+MONITOREO_CONSULTAS_PATH=/monitoreo/consultas
+MONITOREO_MEDICOS_PATH=/monitoreo/medicos
 NEXT_PUBLIC_APP_NAME=Servicell
 ```
 
