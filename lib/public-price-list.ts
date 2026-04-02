@@ -1,30 +1,17 @@
-import type { SparePartPriceItem } from "@/lib/types";
+﻿import type { SparePartPriceItem } from "@/lib/types";
 
 const SPREADSHEET_ID = "1G1s5xF9nWG49ydyp21vsU2VXXRmXQXT4";
-const SHEET_NAMES = [
-  "MÓDULOS",
-  "BATERÍAS",
-  "PLACAS DE CARGA",
-  "TAPAS",
-  "FLEX",
-  "PORTA SIM",
-  "LENTES DE CÁMARA",
-  "PIEZAS CHICAS ",
-  "CÁMARAS"
-];
-
-type GoogleSheetCell = {
-  v?: string | number | null;
-  f?: string;
-};
-
-type GoogleSheetResponse = {
-  table?: {
-    rows?: Array<{
-      c?: Array<GoogleSheetCell | null>;
-    }>;
-  };
-};
+const SHEETS = [
+  { categoria: "Modulos", sheet: "M\u00D3DULOS" },
+  { categoria: "Baterias", sheet: "BATER\u00CDAS" },
+  { categoria: "Placas de carga", sheet: "PLACAS DE CARGA" },
+  { categoria: "Tapas", sheet: "TAPAS" },
+  { categoria: "Flex", sheet: "FLEX" },
+  { categoria: "Porta SIM", sheet: "PORTA SIM" },
+  { categoria: "Lentes de camara", sheet: "LENTES DE C\u00C1MARA" },
+  { categoria: "Piezas chicas", sheet: "PIEZAS CHICAS " },
+  { categoria: "Camaras", sheet: "C\u00C1MARAS" }
+] as const;
 
 function normalizeCell(value: unknown) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -38,33 +25,80 @@ function normalizeKey(value: unknown) {
 }
 
 function parsePrice(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  const text = normalizeCell(value);
+  const text = normalizeCell(value).replace(/[^0-9.,-]/g, "");
   if (!text) {
     return 0;
   }
 
-  const normalized = text.replace(/[^0-9.,-]/g, "").replace(/\.(?=.*\.)/g, "").replace(",", ".");
+  if (text.includes(",") && text.includes(".")) {
+    const normalized = text.replace(/,/g, "");
+    const amount = Number(normalized);
+    return Number.isFinite(amount) ? amount : 0;
+  }
+
+  if (text.includes(",")) {
+    const normalized = text.replace(/\./g, "").replace(",", ".");
+    const amount = Number(normalized);
+    return Number.isFinite(amount) ? amount : 0;
+  }
+
+  const normalized = text.replace(/,/g, "");
   const amount = Number(normalized);
   return Number.isFinite(amount) ? amount : 0;
 }
 
-function extractJson(text: string) {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
+function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let value = "";
+  let inQuotes = false;
 
-  if (start < 0 || end < 0) {
-    throw new Error("No se pudo interpretar la respuesta publica de Google Sheets.");
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        value += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      row.push(value);
+      value = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") {
+        index += 1;
+      }
+      row.push(value);
+      value = "";
+      if (row.some((cell) => cell.length)) {
+        rows.push(row);
+      }
+      row = [];
+      continue;
+    }
+
+    value += char;
   }
 
-  return JSON.parse(text.slice(start, end + 1)) as GoogleSheetResponse;
+  row.push(value);
+  if (row.some((cell) => cell.length)) {
+    rows.push(row);
+  }
+
+  return rows;
 }
 
 async function fetchSheetRows(sheetName: string) {
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
   const response = await fetch(url, {
     next: { revalidate: 900 }
   });
@@ -73,15 +107,16 @@ async function fetchSheetRows(sheetName: string) {
     throw new Error(`No se pudo leer la hoja ${sheetName} (${response.status}).`);
   }
 
-  const payload = extractJson(await response.text());
-
-  return (payload.table?.rows ?? []).map((row) => (row.c ?? []).map((cell) => cell?.f ?? cell?.v ?? ""));
+  return parseCsv(await response.text());
 }
 
-function buildSheetItems(sheetName: string, rows: unknown[][]) {
+function buildSheetItems(categoria: string, sheetName: string, rows: string[][]) {
   const headerIndex = rows.findIndex((row) => {
     const keys = row.map(normalizeKey);
-    return keys.includes("MODELO") && keys.includes("PRECIO");
+    return (
+      keys.includes("PRECIO") &&
+      (keys.includes("MODELO") || keys.includes("CAMARA PRINCIPAL") || keys.includes("CAMARA FRONTAL"))
+    );
   });
 
   if (headerIndex < 0) {
@@ -89,8 +124,11 @@ function buildSheetItems(sheetName: string, rows: unknown[][]) {
   }
 
   const header = rows[headerIndex].map(normalizeKey);
+  const fallbackMarcaIndex = header[0] ? -1 : 0;
   const marcaIndex = header.findIndex((value) => value === "MARCA");
-  const modeloIndex = header.findIndex((value) => value === "MODELO");
+  const modeloIndex = header.findIndex((value) =>
+    ["MODELO", "CAMARA PRINCIPAL", "CAMARA FRONTAL"].includes(value)
+  );
   const precioIndex = header.findIndex((value) => value === "PRECIO");
 
   if (modeloIndex < 0 || precioIndex < 0) {
@@ -102,7 +140,7 @@ function buildSheetItems(sheetName: string, rows: unknown[][]) {
   for (const row of rows.slice(headerIndex + 1)) {
     const precio = parsePrice(row[precioIndex]);
     const modelo = normalizeCell(row[modeloIndex]);
-    const marca = marcaIndex >= 0 ? normalizeCell(row[marcaIndex]) : "";
+    const marca = marcaIndex >= 0 ? normalizeCell(row[marcaIndex]) : fallbackMarcaIndex >= 0 ? normalizeCell(row[fallbackMarcaIndex]) : "";
 
     if (!modelo || precio <= 0) {
       continue;
@@ -110,11 +148,11 @@ function buildSheetItems(sheetName: string, rows: unknown[][]) {
 
     items.push({
       id: `${sheetName}-${marca}-${modelo}`.toLowerCase().replace(/\s+/g, "-"),
-      categoria: normalizeCell(sheetName),
+      categoria,
       marca,
       modelo,
       precio,
-      descripcion: [normalizeCell(sheetName), marca, modelo].filter(Boolean).join(" - ")
+      descripcion: [categoria, marca, modelo].filter(Boolean).join(" - ")
     });
   }
 
@@ -122,11 +160,16 @@ function buildSheetItems(sheetName: string, rows: unknown[][]) {
 }
 
 export async function getPublicSparePartOptions() {
-  const sheetRows = await Promise.all(
-    SHEET_NAMES.map((sheetName) => fetchSheetRows(sheetName).then((rows) => [sheetName, rows] as const))
-  );
+  try {
+    const sheetRows = await Promise.all(
+      SHEETS.map(({ categoria, sheet }) => fetchSheetRows(sheet).then((rows) => ({ categoria, sheet, rows })))
+    );
 
-  return sheetRows
-    .flatMap(([sheetName, rows]) => buildSheetItems(sheetName, rows))
-    .sort((left, right) => left.descripcion.localeCompare(right.descripcion, "es"));
+    return sheetRows
+      .flatMap(({ categoria, sheet, rows }) => buildSheetItems(categoria, sheet, rows))
+      .sort((left, right) => left.descripcion.localeCompare(right.descripcion, "es"));
+  } catch (error) {
+    console.error("No se pudo cargar la lista publica de repuestos", error);
+    return [];
+  }
 }
