@@ -41,7 +41,7 @@ export default async function UltimasVentasPage({
             className="button"
             href={`/api/ultimas_ventas/export?fecha_desde=${fechaDesde}&fecha_hasta=${fechaHasta}`}
           >
-            Exportar Excel
+            Exportar CSV
           </a>
         </div>
       </div>

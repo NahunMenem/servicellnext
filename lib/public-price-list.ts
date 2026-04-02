@@ -1,9 +1,30 @@
-﻿import * as XLSX from "xlsx";
 import type { SparePartPriceItem } from "@/lib/types";
 
-const PRICE_LIST_URL =
-  "https://docs.google.com/spreadsheets/d/1G1s5xF9nWG49ydyp21vsU2VXXRmXQXT4/export?format=xlsx";
-const EXCLUDED_SHEETS = new Set(["TERMINOS Y CONDICIONES", "CELULARES"]);
+const SPREADSHEET_ID = "1G1s5xF9nWG49ydyp21vsU2VXXRmXQXT4";
+const SHEET_NAMES = [
+  "MÓDULOS",
+  "BATERÍAS",
+  "PLACAS DE CARGA",
+  "TAPAS",
+  "FLEX",
+  "PORTA SIM",
+  "LENTES DE CÁMARA",
+  "PIEZAS CHICAS ",
+  "CÁMARAS"
+];
+
+type GoogleSheetCell = {
+  v?: string | number | null;
+  f?: string;
+};
+
+type GoogleSheetResponse = {
+  table?: {
+    rows?: Array<{
+      c?: Array<GoogleSheetCell | null>;
+    }>;
+  };
+};
 
 function normalizeCell(value: unknown) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -29,6 +50,32 @@ function parsePrice(value: unknown) {
   const normalized = text.replace(/[^0-9.,-]/g, "").replace(/\.(?=.*\.)/g, "").replace(",", ".");
   const amount = Number(normalized);
   return Number.isFinite(amount) ? amount : 0;
+}
+
+function extractJson(text: string) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+
+  if (start < 0 || end < 0) {
+    throw new Error("No se pudo interpretar la respuesta publica de Google Sheets.");
+  }
+
+  return JSON.parse(text.slice(start, end + 1)) as GoogleSheetResponse;
+}
+
+async function fetchSheetRows(sheetName: string) {
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+  const response = await fetch(url, {
+    next: { revalidate: 900 }
+  });
+
+  if (!response.ok) {
+    throw new Error(`No se pudo leer la hoja ${sheetName} (${response.status}).`);
+  }
+
+  const payload = extractJson(await response.text());
+
+  return (payload.table?.rows ?? []).map((row) => (row.c ?? []).map((cell) => cell?.f ?? cell?.v ?? ""));
 }
 
 function buildSheetItems(sheetName: string, rows: unknown[][]) {
@@ -63,11 +110,11 @@ function buildSheetItems(sheetName: string, rows: unknown[][]) {
 
     items.push({
       id: `${sheetName}-${marca}-${modelo}`.toLowerCase().replace(/\s+/g, "-"),
-      categoria: sheetName,
+      categoria: normalizeCell(sheetName),
       marca,
       modelo,
       precio,
-      descripcion: [sheetName, marca, modelo].filter(Boolean).join(" - ")
+      descripcion: [normalizeCell(sheetName), marca, modelo].filter(Boolean).join(" - ")
     });
   }
 
@@ -75,22 +122,11 @@ function buildSheetItems(sheetName: string, rows: unknown[][]) {
 }
 
 export async function getPublicSparePartOptions() {
-  const response = await fetch(PRICE_LIST_URL, {
-    next: { revalidate: 900 }
-  });
+  const sheetRows = await Promise.all(
+    SHEET_NAMES.map((sheetName) => fetchSheetRows(sheetName).then((rows) => [sheetName, rows] as const))
+  );
 
-  if (!response.ok) {
-    throw new Error(`No se pudo leer la lista publica de repuestos (${response.status}).`);
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-  const workbook = XLSX.read(buffer, { type: "buffer" });
-
-  return workbook.SheetNames.filter((sheetName) => !EXCLUDED_SHEETS.has(normalizeKey(sheetName)))
-    .flatMap((sheetName) => {
-      const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
-      return buildSheetItems(sheetName, rows);
-    })
+  return sheetRows
+    .flatMap(([sheetName, rows]) => buildSheetItems(sheetName, rows))
     .sort((left, right) => left.descripcion.localeCompare(right.descripcion, "es"));
 }
