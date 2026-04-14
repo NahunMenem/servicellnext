@@ -1,7 +1,24 @@
-import { Pool, type QueryResultRow } from "pg";
+import { Pool, types, type QueryResultRow } from "pg";
 
 declare global {
   var __servicellPool: Pool | undefined;
+  var __servicellPgTypesConfigured: boolean | undefined;
+}
+
+const PG_TIMESTAMP_OID = 1114;
+const ARGENTINA_OFFSET = "-03:00";
+
+function configurePgTypes() {
+  if (global.__servicellPgTypesConfigured) {
+    return;
+  }
+
+  types.setTypeParser(PG_TIMESTAMP_OID, (value) => {
+    if (!value) return value;
+    return new Date(String(value).replace(" ", "T") + ARGENTINA_OFFSET);
+  });
+
+  global.__servicellPgTypesConfigured = true;
 }
 
 function getDatabaseUrl() {
@@ -15,6 +32,8 @@ function getDatabaseUrl() {
 }
 
 export function getPool() {
+  configurePgTypes();
+
   if (!global.__servicellPool) {
     const connectionString = getDatabaseUrl();
     global.__servicellPool = new Pool({
