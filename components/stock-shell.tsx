@@ -95,21 +95,23 @@ export function StockShell({
             <span className="muted">Busca en vivo por nombre o codigo de barras.</span>
           </div>
           <div className="actions">
-            <Modal
-              description="Se borraran todos los productos con stock en 0 que no tengan historial asociado."
-              title="Confirmar borrado masivo"
-              triggerClassName="button danger"
-              triggerLabel="Borrar stock 0"
-            >
-              <form action={deleteZeroStockProductsAction} className="stack">
-                <p className="muted">Esta accion eliminara todos los productos con stock 0 disponibles para borrar.</p>
-                <div className="actions">
-                  <button className="button danger" type="submit">
-                    Si, borrar todo el stock 0
-                  </button>
-                </div>
-              </form>
-            </Modal>
+            {role === "admin" ? (
+              <Modal
+                description="Se borraran todos los productos que hoy tengan stock en 0. La accion quedara auditada."
+                title="Confirmar borrado masivo"
+                triggerClassName="button danger"
+                triggerLabel="Borrar stock 0"
+              >
+                <form action={deleteZeroStockProductsAction} className="stack">
+                  <p className="muted">Esta accion eliminara todos los productos con stock 0 y dejara registro en auditoria.</p>
+                  <div className="actions">
+                    <button className="button danger" type="submit">
+                      Si, borrar todo el stock 0
+                    </button>
+                  </div>
+                </form>
+              </Modal>
+            ) : null}
             <Modal
               description="Agrega un producto nuevo sin salir del listado."
               title="Nuevo producto"
@@ -251,22 +253,24 @@ export function StockShell({
                             </button>
                           </form>
                         </Modal>
-                        <Modal
-                          description={`Se eliminara ${producto.nombre} si no tiene historial bloqueante.`}
-                          title="Confirmar eliminacion"
-                          triggerClassName="button danger"
-                          triggerLabel="Eliminar"
-                        >
-                          <form action={deleteProductAction} className="stack">
-                            <input type="hidden" name="producto_id" value={producto.id} />
-                            <p className="muted">Estas seguro de que quieres eliminar este producto?</p>
-                            <div className="actions">
-                              <button className="button danger" type="submit">
-                                Si, eliminar producto
-                              </button>
-                            </div>
-                          </form>
-                        </Modal>
+                        {role === "admin" ? (
+                          <Modal
+                            description={`Se eliminara ${producto.nombre} y la accion quedara auditada.`}
+                            title="Confirmar eliminacion"
+                            triggerClassName="button danger"
+                            triggerLabel="Eliminar"
+                          >
+                            <form action={deleteProductAction} className="stack">
+                              <input type="hidden" name="producto_id" value={producto.id} />
+                              <p className="muted">Estas seguro de que quieres eliminar este producto?</p>
+                              <div className="actions">
+                                <button className="button danger" type="submit">
+                                  Si, eliminar producto
+                                </button>
+                              </div>
+                            </form>
+                          </Modal>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

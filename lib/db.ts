@@ -19,6 +19,7 @@ export function getPool() {
     const connectionString = getDatabaseUrl();
     global.__servicellPool = new Pool({
       connectionString,
+      options: "-c timezone=America/Argentina/Buenos_Aires",
       ssl: connectionString.includes("localhost")
         ? false
         : { rejectUnauthorized: false }

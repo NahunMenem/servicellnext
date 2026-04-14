@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth";
 import { getVentasAndReparaciones } from "@/lib/data";
+import { formatDate, toInputDate } from "@/lib/utils";
 
 function escapeCsv(value: unknown) {
   const text = String(value ?? "");
@@ -27,8 +28,9 @@ function buildCsvSection<T extends Record<string, unknown>>(title: string, rows:
 export async function GET(request: Request) {
   await requireSession();
   const { searchParams } = new URL(request.url);
-  const fechaDesde = searchParams.get("fecha_desde") ?? new Date().toISOString().slice(0, 10);
-  const fechaHasta = searchParams.get("fecha_hasta") ?? new Date().toISOString().slice(0, 10);
+  const today = toInputDate(new Date());
+  const fechaDesde = searchParams.get("fecha_desde") ?? today;
+  const fechaHasta = searchParams.get("fecha_hasta") ?? today;
   const data = await getVentasAndReparaciones(fechaDesde, fechaHasta);
 
   const ventasRows = data.ventas.map((venta) => ({
@@ -38,7 +40,7 @@ export async function GET(request: Request) {
     cantidad: venta.cantidad,
     precio_unitario: Number(venta.precio_unitario),
     total: Number(venta.total),
-    fecha: venta.fecha,
+    fecha: formatDate(venta.fecha),
     tipo_pago: venta.tipo_pago,
     dni_cliente: venta.dni_cliente ?? ""
   }));
@@ -50,7 +52,7 @@ export async function GET(request: Request) {
     cantidad: item.cantidad,
     precio_unitario: Number(item.precio_unitario),
     total: Number(item.total),
-    fecha: item.fecha,
+    fecha: formatDate(item.fecha),
     tipo_pago: item.tipo_pago
   }));
 

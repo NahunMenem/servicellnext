@@ -199,6 +199,18 @@ button {
   font-size: 0.8rem;
 }
 
+.audit-detail {
+  display: inline-block;
+  max-width: 360px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.disabled-link {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
 .content {
   padding: 2rem 1.5rem 3rem;
 }

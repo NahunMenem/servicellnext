@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Menu,
   Package,
+  Shield,
   ShoppingCart,
   Star,
   Stethoscope,
@@ -44,7 +45,11 @@ export function Sidebar({ username, role }: { username: string; role: string }) 
   const [open, setOpen] = useState(false);
   const visibleLinks =
     role === "admin"
-      ? [{ href: "/dashboard", label: "Dashboard", Icon: BarChart3 }, ...links]
+      ? [
+          { href: "/dashboard", label: "Dashboard", Icon: BarChart3 },
+          ...links,
+          { href: "/auditoria", label: "Auditoria", Icon: Shield }
+        ]
       : links;
 
   return (

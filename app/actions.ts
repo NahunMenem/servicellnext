@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearCart, getCart, setCart } from "@/lib/cart";
 import { loginWithPassword, logout, requireSession } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 import { getPool, sql } from "@/lib/db";
 import { setLastSaleReceipt } from "@/lib/sale-receipt";
 import { ensureEgresosRepairLinkSchema, ensureSplitPaymentSchema } from "@/lib/data";
+import { getArgentinaNowParts } from "@/lib/utils";
 
 function getString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -62,6 +64,22 @@ function buildErrorRedirect(path: string, notice: string, extra?: Record<string,
     notice,
     notice_type: "error"
   });
+}
+
+async function requireAdminSession() {
+  const session = await requireSession();
+  if (session.role !== "admin") {
+    redirect(buildErrorRedirect("/inicio", "Solo el perfil admin puede realizar esa accion."));
+  }
+  return session;
+}
+
+async function safeAudit(params: Parameters<typeof logAudit>[0]) {
+  try {
+    await logAudit(params);
+  } catch (error) {
+    console.error("No se pudo guardar la auditoria", error);
+  }
 }
 
 export async function loginAction(formData: FormData) {
@@ -183,7 +201,7 @@ export async function clearCartAction() {
 }
 
 export async function registerSaleAction(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
   await ensureSplitPaymentSchema();
   const cart = await getCart();
   if (!cart.length) {
@@ -316,24 +334,50 @@ export async function registerSaleAction(formData: FormData) {
   revalidatePath("/caja");
   revalidatePath("/ultimas_ventas");
   revalidatePath("/reparaciones");
+  await safeAudit({
+    username: session.username,
+    action: "crear",
+    entityType: "venta",
+    summary: `Registro una venta por ${total} con ${cart.length} item(s).`,
+    detail: JSON.stringify({
+      total,
+      dniCliente,
+      pagos: receiptPayload.pagos,
+      items: receiptPayload.items
+    })
+  });
   redirect(buildSuccessRedirect("/registrar_venta", "Venta registrada con exito."));
 }
 
 export async function createProductAction(formData: FormData) {
-  await requireSession();
-  await sql(
+  const session = await requireSession();
+  const nombre = getString(formData, "nombre");
+  const codigoBarras = getString(formData, "codigo_barras");
+  const stock = getNumber(formData, "stock");
+  const precio = getNumber(formData, "precio");
+  const precioCosto = getNumber(formData, "precio_costo");
+  const created = await sql<{ id: number }>(
     `
       INSERT INTO productos (nombre, codigo_barras, stock, precio, precio_costo)
       VALUES (UPPER($1), $2, $3, $4, $5)
+      RETURNING id
     `,
     [
-      getString(formData, "nombre"),
-      getString(formData, "codigo_barras"),
-      getNumber(formData, "stock"),
-      getNumber(formData, "precio"),
-      getNumber(formData, "precio_costo")
+      nombre,
+      codigoBarras,
+      stock,
+      precio,
+      precioCosto
     ]
   );
+  await safeAudit({
+    username: session.username,
+    action: "crear",
+    entityType: "producto",
+    entityId: created.rows[0]?.id,
+    summary: `Creo el producto ${nombre.toUpperCase()}.`,
+    detail: JSON.stringify({ codigoBarras, stock, precio, precioCosto })
+  });
   revalidatePath("/agregar_stock");
   redirect(buildSuccessRedirect("/agregar_stock", "Producto cargado con exito."));
 }
@@ -342,6 +386,16 @@ export async function updateProductAction(formData: FormData) {
   const session = await requireSession();
   const productoId = getNumber(formData, "producto_id");
   let stock = getNumber(formData, "stock");
+  const previous = await sql<{
+    nombre: string;
+    codigo_barras: string;
+    stock: number;
+    precio: string;
+    precio_costo: string;
+  }>(
+    "SELECT nombre, codigo_barras, stock, precio::text, precio_costo::text FROM productos WHERE id = $1 LIMIT 1",
+    [productoId]
+  );
 
   if (session.role !== "admin") {
     const currentProduct = await sql<{ stock: number }>(
@@ -366,25 +420,71 @@ export async function updateProductAction(formData: FormData) {
       productoId
     ]
   );
+  await safeAudit({
+    username: session.username,
+    action: "editar",
+    entityType: "producto",
+    entityId: productoId,
+    summary: `Actualizo el producto ${getString(formData, "nombre").toUpperCase()}.`,
+    detail: JSON.stringify({
+      before: previous.rows[0] ?? null,
+      after: {
+        nombre: getString(formData, "nombre").toUpperCase(),
+        codigo_barras: getString(formData, "codigo_barras"),
+        stock,
+        precio: getNumber(formData, "precio"),
+        precio_costo: getNumber(formData, "precio_costo")
+      }
+    })
+  });
   revalidatePath("/agregar_stock");
   redirect(buildSuccessRedirect("/agregar_stock", "Producto actualizado con exito."));
 }
 
 export async function addStockAction(formData: FormData) {
-  await requireSession();
-  await sql("UPDATE productos SET stock = stock + $1 WHERE id = $2", [
-    getNumber(formData, "cantidad"),
-    getNumber(formData, "producto_id")
-  ]);
+  const session = await requireSession();
+  const productoId = getNumber(formData, "producto_id");
+  const cantidad = getNumber(formData, "cantidad");
+  const product = await sql<{ nombre: string; stock: number }>(
+    "SELECT nombre, stock FROM productos WHERE id = $1 LIMIT 1",
+    [productoId]
+  );
+  await sql("UPDATE productos SET stock = stock + $1 WHERE id = $2", [cantidad, productoId]);
+  await safeAudit({
+    username: session.username,
+    action: "sumar_stock",
+    entityType: "producto",
+    entityId: productoId,
+    summary: `Sumo ${cantidad} unidad(es) al stock de ${product.rows[0]?.nombre ?? `#${productoId}`}.`,
+    detail: JSON.stringify({
+      cantidad,
+      stock_anterior: product.rows[0]?.stock ?? null,
+      stock_nuevo: (product.rows[0]?.stock ?? 0) + cantidad
+    })
+  });
   revalidatePath("/agregar_stock");
   redirect(buildSuccessRedirect("/agregar_stock", "Stock actualizado con exito."));
 }
 
 export async function deleteProductAction(formData: FormData) {
-  await requireSession();
+  const session = await requireAdminSession();
   const productoId = getNumber(formData, "producto_id");
+  const product = await sql<{ nombre: string; codigo_barras: string; stock: number }>(
+    "SELECT nombre, codigo_barras, stock FROM productos WHERE id = $1 LIMIT 1",
+    [productoId]
+  );
   await sql("DELETE FROM mercaderia_fallada WHERE producto_id = $1", [productoId]);
   const deleted = await sql("DELETE FROM productos WHERE id = $1 RETURNING id", [productoId]);
+  if (deleted.rowCount) {
+    await safeAudit({
+      username: session.username,
+      action: "eliminar",
+      entityType: "producto",
+      entityId: productoId,
+      summary: `Elimino el producto ${product.rows[0]?.nombre ?? `#${productoId}`}.`,
+      detail: JSON.stringify(product.rows[0] ?? null)
+    });
+  }
   revalidatePath("/agregar_stock");
   revalidatePath("/mercaderia_fallada");
   redirect(
@@ -395,12 +495,21 @@ export async function deleteProductAction(formData: FormData) {
 }
 
 export async function deleteZeroStockProductsAction() {
-  await requireSession();
+  const session = await requireAdminSession();
   const deletable = await sql<{ total: string }>(`
     SELECT COUNT(*)::text AS total
     FROM productos
     WHERE stock = 0
   `);
+  const sample = await sql<{ id: number; nombre: string }>(
+    `
+      SELECT id, nombre
+      FROM productos
+      WHERE stock = 0
+      ORDER BY nombre ASC
+      LIMIT 20
+    `
+  );
   await sql(`
     DELETE FROM mercaderia_fallada
     WHERE producto_id IN (SELECT id FROM productos WHERE stock = 0)
@@ -409,6 +518,16 @@ export async function deleteZeroStockProductsAction() {
     DELETE FROM productos
     WHERE stock = 0
   `);
+  await safeAudit({
+    username: session.username,
+    action: "eliminar_masivo",
+    entityType: "producto",
+    summary: `Ejecuto el borrado masivo de productos con stock 0.`,
+    detail: JSON.stringify({
+      total: Number(deletable.rows[0]?.total ?? 0),
+      sample: sample.rows
+    })
+  });
   revalidatePath("/agregar_stock");
   revalidatePath("/mercaderia_fallada");
   redirect(
@@ -422,25 +541,39 @@ export async function deleteZeroStockProductsAction() {
 }
 
 export async function createEgresoAction(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
   await ensureEgresosRepairLinkSchema();
   const equipoId = getNumber(formData, "equipo_id");
   const fechaDesde = getString(formData, "fecha_desde");
   const fechaHasta = getString(formData, "fecha_hasta");
-  await sql(
+  const fecha = getString(formData, "fecha");
+  const monto = getNumber(formData, "monto");
+  const descripcion = getString(formData, "descripcion");
+  const tipoPago = getString(formData, "tipo_pago");
+  const tipoEgreso = getString(formData, "tipo_egreso") || "general";
+  const inserted = await sql<{ id: number }>(
     `
       INSERT INTO egresos (fecha, monto, descripcion, tipo_pago, tipo_egreso, equipo_id)
       VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id
     `,
     [
-      getString(formData, "fecha"),
-      getNumber(formData, "monto"),
-      getString(formData, "descripcion"),
-      getString(formData, "tipo_pago"),
-      getString(formData, "tipo_egreso") || "general",
+      fecha,
+      monto,
+      descripcion,
+      tipoPago,
+      tipoEgreso,
       equipoId || null
     ]
   );
+  await safeAudit({
+    username: session.username,
+    action: "crear",
+    entityType: "egreso",
+    entityId: inserted.rows[0]?.id,
+    summary: `Cargo un egreso por ${monto}.`,
+    detail: JSON.stringify({ fecha, monto, descripcion, tipoPago, tipoEgreso, equipoId: equipoId || null })
+  });
   revalidatePath("/egresos");
   revalidatePath("/dashboard");
   revalidatePath("/caja");
@@ -452,10 +585,23 @@ export async function createEgresoAction(formData: FormData) {
 }
 
 export async function deleteEgresoAction(formData: FormData) {
-  await requireSession();
+  const session = await requireAdminSession();
   const fechaDesde = getString(formData, "fecha_desde");
   const fechaHasta = getString(formData, "fecha_hasta");
-  await sql("DELETE FROM egresos WHERE id = $1", [getNumber(formData, "egreso_id")]);
+  const egresoId = getNumber(formData, "egreso_id");
+  const egreso = await sql<{ fecha: string; monto: string; descripcion: string; tipo_pago: string }>(
+    "SELECT fecha::text, monto::text, descripcion, tipo_pago FROM egresos WHERE id = $1 LIMIT 1",
+    [egresoId]
+  );
+  await sql("DELETE FROM egresos WHERE id = $1", [egresoId]);
+  await safeAudit({
+    username: session.username,
+    action: "eliminar",
+    entityType: "egreso",
+    entityId: egresoId,
+    summary: `Elimino un egreso.`,
+    detail: JSON.stringify(egreso.rows[0] ?? null)
+  });
   revalidatePath("/egresos");
   revalidatePath("/dashboard");
   revalidatePath("/caja");
@@ -487,7 +633,7 @@ export async function updateEgresoLinkAction(formData: FormData) {
 }
 
 export async function saveCajaSemanaAction(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
   const semanaInicio = getString(formData, "semana_inicio");
   const efectivoInicial = getNumber(formData, "efectivo_inicial");
   const fechaDesde = getString(formData, "fecha_desde");
@@ -511,6 +657,14 @@ export async function saveCajaSemanaAction(formData: FormData) {
     [semanaInicio, efectivoInicial]
   );
 
+  await safeAudit({
+    username: session.username,
+    action: "guardar",
+    entityType: "caja_semanal",
+    entityId: semanaInicio,
+    summary: `Actualizo la caja semanal.`,
+    detail: JSON.stringify({ semanaInicio, efectivoInicial })
+  });
   revalidatePath("/caja");
   redirect(buildRedirectWithDates("/caja", fechaDesde, fechaHasta, {
     notice: "Caja semanal guardada con exito.",
@@ -519,9 +673,9 @@ export async function saveCajaSemanaAction(formData: FormData) {
 }
 
 export async function createEquipoAction(formData: FormData) {
-  await requireSession();
-  const now = new Date();
-  const prefix = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, "0");
+  const session = await requireSession();
+  const now = getArgentinaNowParts();
+  const prefix = String(now.year).slice(-2) + String(now.month).padStart(2, "0");
   const ultimo = await sql<{ nro_orden: string }>(
     `
       SELECT nro_orden
@@ -536,31 +690,78 @@ export async function createEquipoAction(formData: FormData) {
   const ultimoNumero = ultimo.rows[0] ? Number(ultimo.rows[0].nro_orden.split("-").at(-1)) : 0;
   const nroOrden = `${prefix}-${ultimoNumero + 1}`;
 
-  await sql(
+  const tipoReparacion = getString(formData, "tipo_reparacion");
+  const equipo = getString(formData, "equipo");
+  const modelo = getString(formData, "modelo");
+  const tecnico = getString(formData, "tecnico");
+  const monto = getNumber(formData, "monto");
+  const nombreCliente = getString(formData, "nombre_cliente");
+  const telefono = getString(formData, "telefono");
+  const observaciones = getString(formData, "observaciones");
+  const inserted = await sql<{ id: number }>(
     `
       INSERT INTO equipos (
         tipo_reparacion, marca, modelo, tecnico, monto,
         nombre_cliente, telefono, nro_orden, fecha, hora, estado, observaciones
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_DATE, CURRENT_TIME, 'Por Reparar', $9)
+      RETURNING id
     `,
     [
-      getString(formData, "tipo_reparacion"),
-      getString(formData, "equipo"),
-      getString(formData, "modelo"),
-      getString(formData, "tecnico"),
-      getNumber(formData, "monto"),
-      getString(formData, "nombre_cliente"),
-      getString(formData, "telefono"),
+      tipoReparacion,
+      equipo,
+      modelo,
+      tecnico,
+      monto,
+      nombreCliente,
+      telefono,
       nroOrden,
-      getString(formData, "observaciones")
+      observaciones
     ]
   );
+  await safeAudit({
+    username: session.username,
+    action: "crear",
+    entityType: "equipo",
+    entityId: inserted.rows[0]?.id,
+    summary: `Registro la reparacion ${nroOrden}.`,
+    detail: JSON.stringify({
+      nroOrden,
+      tipoReparacion,
+      equipo,
+      modelo,
+      tecnico,
+      monto,
+      nombreCliente,
+      telefono,
+      observaciones
+    })
+  });
   revalidatePath("/reparaciones");
   redirect(buildSuccessRedirect("/reparaciones", "Reparacion cargada con exito."));
 }
 
 export async function updateEquipoAction(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
+  const equipoId = getNumber(formData, "id");
+  const previous = await sql<{
+    tipo_reparacion: string;
+    marca: string;
+    modelo: string;
+    tecnico: string;
+    monto: string;
+    nombre_cliente: string;
+    telefono: string;
+    observaciones: string | null;
+    estado: string;
+  }>(
+    `
+      SELECT tipo_reparacion, marca, modelo, tecnico, monto::text, nombre_cliente, telefono, observaciones, estado
+      FROM equipos
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [equipoId]
+  );
   await sql(
     `
       UPDATE equipos
@@ -586,40 +787,92 @@ export async function updateEquipoAction(formData: FormData) {
       getString(formData, "telefono"),
       getString(formData, "observaciones"),
       getString(formData, "estado"),
-      getNumber(formData, "id")
+      equipoId
     ]
   );
+  await safeAudit({
+    username: session.username,
+    action: "editar",
+    entityType: "equipo",
+    entityId: equipoId,
+    summary: `Actualizo una reparacion.`,
+    detail: JSON.stringify({
+      before: previous.rows[0] ?? null,
+      after: {
+        tipo_reparacion: getString(formData, "tipo_reparacion"),
+        marca: getString(formData, "marca"),
+        modelo: getString(formData, "modelo"),
+        tecnico: getString(formData, "tecnico"),
+        monto: getNumber(formData, "monto"),
+        nombre_cliente: getString(formData, "nombre_cliente"),
+        telefono: getString(formData, "telefono"),
+        observaciones: getString(formData, "observaciones"),
+        estado: getString(formData, "estado")
+      }
+    })
+  });
   revalidatePath("/reparaciones");
   redirect(buildSuccessRedirect("/reparaciones", "Reparacion actualizada con exito."));
 }
 
 export async function deleteEquipoAction(formData: FormData) {
-  await requireSession();
-  await sql("DELETE FROM equipos WHERE id = $1", [getNumber(formData, "id")]);
+  const session = await requireAdminSession();
+  const equipoId = getNumber(formData, "id");
+  const equipo = await sql<{ nro_orden: string; nombre_cliente: string; marca: string; modelo: string }>(
+    "SELECT nro_orden, nombre_cliente, marca, modelo FROM equipos WHERE id = $1 LIMIT 1",
+    [equipoId]
+  );
+  await sql("DELETE FROM equipos WHERE id = $1", [equipoId]);
+  await safeAudit({
+    username: session.username,
+    action: "eliminar",
+    entityType: "equipo",
+    entityId: equipoId,
+    summary: `Elimino una reparacion.`,
+    detail: JSON.stringify(equipo.rows[0] ?? null)
+  });
   revalidatePath("/reparaciones");
   redirect(buildSuccessRedirect("/reparaciones", "Reparacion eliminada con exito."));
 }
 
 export async function updateEquipoStatusAction(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
+  const estado = getString(formData, "estado");
+  const nroOrden = getString(formData, "nro_orden");
   await sql("UPDATE equipos SET estado = $1 WHERE nro_orden = $2", [
-    getString(formData, "estado"),
-    getString(formData, "nro_orden")
+    estado,
+    nroOrden
   ]);
+  await safeAudit({
+    username: session.username,
+    action: "cambiar_estado",
+    entityType: "equipo",
+    entityId: nroOrden,
+    summary: `Cambio el estado de la reparacion ${nroOrden} a ${estado}.`
+  });
   revalidatePath("/reparaciones");
   redirect(buildSuccessRedirect("/reparaciones", "Estado de la reparacion actualizado con exito."));
 }
 
 export async function updateEquipoStatusWithReturnAction(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
   const fechaDesde = getString(formData, "fecha_desde");
   const fechaHasta = getString(formData, "fecha_hasta");
+  const estado = getString(formData, "estado");
+  const nroOrden = getString(formData, "nro_orden");
 
   await sql("UPDATE equipos SET estado = $1 WHERE nro_orden = $2", [
-    getString(formData, "estado"),
-    getString(formData, "nro_orden")
+    estado,
+    nroOrden
   ]);
 
+  await safeAudit({
+    username: session.username,
+    action: "cambiar_estado",
+    entityType: "equipo",
+    entityId: nroOrden,
+    summary: `Cambio el estado de la reparacion ${nroOrden} a ${estado}.`
+  });
   revalidatePath("/reparaciones");
   redirect(buildRedirectWithDates("/reparaciones", fechaDesde, fechaHasta, {
     notice: "Estado de la reparacion actualizado con exito.",
@@ -628,7 +881,7 @@ export async function updateEquipoStatusWithReturnAction(formData: FormData) {
 }
 
 export async function createMercaderiaFalladaAction(formData: FormData) {
-  await requireSession();
+  const session = await requireSession();
   const productoId = getNumber(formData, "producto_id");
   const cantidad = getNumber(formData, "cantidad");
 
@@ -650,16 +903,28 @@ export async function createMercaderiaFalladaAction(formData: FormData) {
   );
 
   await sql("UPDATE productos SET stock = stock - $1 WHERE id = $2", [cantidad, productoId]);
+  await safeAudit({
+    username: session.username,
+    action: "descontar_fallada",
+    entityType: "producto",
+    entityId: productoId,
+    summary: `Registro mercaderia fallada por ${cantidad} unidad(es).`,
+    detail: JSON.stringify({
+      descripcion: getString(formData, "descripcion"),
+      productoId,
+      cantidad
+    })
+  });
   revalidatePath("/mercaderia_fallada");
   revalidatePath("/agregar_stock");
   redirect(buildSuccessRedirect("/mercaderia_fallada", "Mercaderia fallada cargada con exito."));
 }
 
 export async function cancelSaleAction(formData: FormData) {
-  await requireSession();
+  const session = await requireAdminSession();
   const saleId = getNumber(formData, "venta_id");
-  const venta = await sql<{ producto_id: number | null; cantidad: number }>(
-    "SELECT producto_id, cantidad FROM ventas WHERE id = $1 LIMIT 1",
+  const venta = await sql<{ producto_id: number | null; cantidad: number; nombre_producto: string | null }>(
+    "SELECT producto_id, cantidad, nombre_producto FROM ventas WHERE id = $1 LIMIT 1",
     [saleId]
   );
 
@@ -673,6 +938,14 @@ export async function cancelSaleAction(formData: FormData) {
   }
 
   await sql("DELETE FROM ventas WHERE id = $1", [saleId]);
+  await safeAudit({
+    username: session.username,
+    action: "anular",
+    entityType: "venta",
+    entityId: saleId,
+    summary: `Anulo una venta.`,
+    detail: JSON.stringify(row)
+  });
   revalidatePath("/ultimas_ventas");
   revalidatePath("/dashboard");
   revalidatePath("/caja");
@@ -680,8 +953,21 @@ export async function cancelSaleAction(formData: FormData) {
 }
 
 export async function cancelRepairSaleAction(formData: FormData) {
-  await requireSession();
-  await sql("DELETE FROM reparaciones WHERE id = $1", [getNumber(formData, "reparacion_id")]);
+  const session = await requireAdminSession();
+  const reparacionId = getNumber(formData, "reparacion_id");
+  const reparacion = await sql<{ nombre_servicio: string; cantidad: number; precio: string }>(
+    "SELECT nombre_servicio, cantidad, precio::text FROM reparaciones WHERE id = $1 LIMIT 1",
+    [reparacionId]
+  );
+  await sql("DELETE FROM reparaciones WHERE id = $1", [reparacionId]);
+  await safeAudit({
+    username: session.username,
+    action: "anular",
+    entityType: "reparacion_venta",
+    entityId: reparacionId,
+    summary: `Anulo una venta de reparacion.`,
+    detail: JSON.stringify(reparacion.rows[0] ?? null)
+  });
   revalidatePath("/ultimas_ventas");
   revalidatePath("/dashboard");
   revalidatePath("/caja");
