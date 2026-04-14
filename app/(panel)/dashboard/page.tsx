@@ -139,6 +139,16 @@ export default async function DashboardPage({
             <span className="kpi-meta">{formatPercent(porcentajeGanancia)} de las ventas</span>
           </div>
         </section>
+        <section className="card dark dashboard-kpi">
+          <div className="dashboard-kpi-icon">
+            <CircleDollarSign size={20} strokeWidth={2} />
+          </div>
+          <div className="stat">
+            <small>Total ganancia + costo</small>
+            <strong>{formatCurrency(dashboard.totalGananciaMasCosto)}</strong>
+            <span className="kpi-meta">Recupero total entre margen y costo</span>
+          </div>
+        </section>
       </div>
 
       <div className="grid cols-2">

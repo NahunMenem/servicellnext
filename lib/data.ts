@@ -237,6 +237,8 @@ export async function getDashboard(fechaDesde: string, fechaHasta: string) {
   const totalVentasReparacionesValue = Number(totalVentasReparaciones.rows[0]?.total ?? 0);
   const totalEgresosValue = Number(totalEgresos.rows[0]?.total ?? 0);
   const totalCostoValue = Number(totalCosto.rows[0]?.total ?? 0);
+  const gananciaValue =
+    totalVentasProductosValue + totalVentasReparacionesValue - totalEgresosValue - totalCostoValue;
 
   const monthlyMap = new Map<string, number>();
   for (const row of ventasMensualesProductos.rows) {
@@ -284,7 +286,8 @@ export async function getDashboard(fechaDesde: string, fechaHasta: string) {
     totalVentasReparaciones: totalVentasReparacionesValue,
     totalEgresos: totalEgresosValue,
     totalCosto: totalCostoValue,
-    ganancia: totalVentasProductosValue + totalVentasReparacionesValue - totalEgresosValue - totalCostoValue,
+    ganancia: gananciaValue,
+    totalGananciaMasCosto: gananciaValue + totalCostoValue,
     totalCostoStock: Number(costoStock.rows[0]?.total ?? 0),
     totalVentaStock: Number(ventaStock.rows[0]?.total ?? 0),
     cantidadTotalStock: Number(cantidadTotalStock.rows[0]?.total ?? 0),
@@ -754,6 +757,7 @@ export async function getCaja(fechaDesde: string, fechaHasta: string, page = 1) 
   for (const tipo of tipos) {
     netoPorPago[tipo] = (ingresosPorPago[tipo] ?? 0) - (totalEgresosPorPago[tipo] ?? 0);
   }
+  const totalNeto = Object.values(netoPorPago).reduce((sum, value) => sum + value, 0);
 
   const efectivoInicial = Number(aperturaSemana.rows[0]?.efectivo_inicial ?? 0);
   const ingresosSemanaPorPago: Record<string, number> = {};
@@ -779,6 +783,7 @@ export async function getCaja(fechaDesde: string, fechaHasta: string, page = 1) 
     egresosEfectivoSemana: egresosSemanaPorPago.efectivo ?? 0,
     ingresosTotales,
     egresosTotales,
+    totalNeto,
     ingresosPorPago,
     egresosPorPago: totalEgresosPorPago,
     netoPorPago

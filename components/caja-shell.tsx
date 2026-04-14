@@ -31,6 +31,7 @@ type CajaData = {
   egresosEfectivoSemana: number;
   ingresosTotales: number;
   egresosTotales: number;
+  totalNeto: number;
   ingresosPorPago: Record<string, number>;
   egresosPorPago: Record<string, number>;
   netoPorPago: Record<string, number>;
@@ -122,6 +123,15 @@ export function CajaShell({
           <div className="stat">
             <small>Egresos del periodo</small>
             <strong>{formatCurrency(caja.egresosTotales)}</strong>
+          </div>
+        </section>
+        <section className="card dashboard-kpi">
+          <div className="dashboard-kpi-icon">
+            <Wallet size={20} strokeWidth={2} />
+          </div>
+          <div className="stat">
+            <small>Total neto</small>
+            <strong>{formatCurrency(caja.totalNeto)}</strong>
           </div>
         </section>
         <section className="card dashboard-kpi">
