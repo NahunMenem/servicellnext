@@ -165,7 +165,7 @@ export function SupplierStoreShell({ initialCatalog }: { initialCatalog: Supplie
       <section className="store-hero">
         <div className="store-hero-copy">
           <span className="store-eyebrow">Catalogo Servicell</span>
-          <h1>Tienda para pedir accesorios y tecnologia con entrega local.</h1>
+          <h1>Tienda mayorista Servicell.</h1>
           <p>
             Elegi productos disponibles, armamos el pedido y coordinamos retiro por local o envio a domicilio.
           </p>
