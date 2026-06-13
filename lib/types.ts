@@ -42,6 +42,41 @@ export type SparePartPriceItem = {
   descripcion: string;
 };
 
+export type SupplierCategory = {
+  id: number;
+  name: string;
+  slug: string;
+  count: number;
+};
+
+export type SupplierProduct = {
+  id: number;
+  name: string;
+  slug: string;
+  sku: string;
+  permalink: string;
+  category: string;
+  categoryId: number | null;
+  image: string;
+  description: string;
+  wholesalePrice: number;
+  publicPrice: number;
+  isInStock: boolean;
+  stockText: string;
+  maxQuantity: number | null;
+};
+
+export type SupplierCatalogResponse = {
+  products: SupplierProduct[];
+  categories: SupplierCategory[];
+  page: number;
+  totalPages: number;
+  totalProducts: number;
+  query: string;
+  category: string;
+  updatedAt: string;
+};
+
 export type DateRange = {
   fechaDesde: string;
   fechaHasta: string;

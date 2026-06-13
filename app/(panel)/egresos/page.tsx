@@ -69,6 +69,7 @@ export default async function EgresosPage({
               <select name="tipo_egreso" defaultValue="general">
                 <option value="general">General</option>
                 <option value="repuesto_reparacion">Repuesto de reparacion</option>
+                <option value="mercaderia_tienda_aftecno">Mercaderia tienda AFTECNO</option>
               </select>
             </div>
             <div className="field full">
@@ -139,7 +140,13 @@ export default async function EgresosPage({
                       <span className="muted">Sin vincular</span>
                     )}
                   </td>
-                  <td>{egreso.tipo_egreso === "repuesto_reparacion" ? "Repuesto reparacion" : "General"}</td>
+                  <td>
+                    {egreso.tipo_egreso === "repuesto_reparacion"
+                      ? "Repuesto reparacion"
+                      : egreso.tipo_egreso === "mercaderia_tienda_aftecno"
+                        ? "Mercaderia tienda AFTECNO"
+                        : "General"}
+                  </td>
                   <td>{egreso.tipo_pago}</td>
                   <td>{formatCurrency(egreso.monto)}</td>
                   <td>

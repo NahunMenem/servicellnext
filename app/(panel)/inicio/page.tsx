@@ -5,12 +5,13 @@ import { formatCurrency } from "@/lib/utils";
 export default async function InicioPage() {
   const stats = await getQuickStats();
   const quickLinks = [
-    ["/caja", "∑", "Caja"],
-    ["/registrar_venta", "🛒", "Ventas"],
-    ["/agregar_stock", "▣", "Stock"],
-    ["/reparaciones", "⌁", "Reparaciones"],
+    ["/caja", "$", "Caja"],
+    ["/registrar_venta", "+", "Ventas"],
+    ["/tienda-servicell", "T", "Tienda Servicell"],
+    ["/agregar_stock", "S", "Stock"],
+    ["/reparaciones", "R", "Reparaciones"],
     ["/cotizar", "$", "Cotizar"],
-    ["/dashboard", "◫", "Dashboard"]
+    ["/dashboard", "D", "Dashboard"]
   ];
 
   return (

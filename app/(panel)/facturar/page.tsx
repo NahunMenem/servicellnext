@@ -1,10 +1,6 @@
 import { facturarAction } from "@/app/actions";
 
-export default async function FacturarPage({
-  searchParams: _searchParams
-}: {
-  searchParams: Promise<Record<string, string | undefined>>;
-}) {
+export default async function FacturarPage() {
   return (
     <div className="stack">
       <div className="page-head">

@@ -7,7 +7,6 @@ import {
   updateEquipoStatusWithReturnAction
 } from "@/app/actions";
 import { Modal } from "@/components/modal";
-import { PaginationControls } from "@/components/pagination-controls";
 import {
   REPAIR_BRANDS,
   REPAIR_STATES,
