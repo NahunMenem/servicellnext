@@ -30,6 +30,10 @@ function clampQuantity(value: number, maxQuantity: number | null) {
   return Math.max(1, Math.min(max, value));
 }
 
+function getBeforePrice(publicPrice: number) {
+  return Math.ceil((publicPrice * 1.6) / 100) * 100;
+}
+
 function buildWhatsAppText(cart: CartLine[], name: string, delivery: string) {
   const lines = cart.map((item) => {
     const subtotal = item.product.publicPrice * item.quantity;
@@ -259,8 +263,10 @@ export function SupplierStoreShell({ initialCatalog }: { initialCatalog: Supplie
                     </div>
                     <div className="store-price-row">
                       <div>
-                        <span>Precio</span>
-                        <strong>{formatCurrency(product.publicPrice)}</strong>
+                        <span className="store-before-price">Antes {formatCurrency(getBeforePrice(product.publicPrice))}</span>
+                        <strong>
+                          <span aria-hidden="true">🔥</span> Hoy {formatCurrency(product.publicPrice)}
+                        </strong>
                       </div>
                     </div>
                     <div className="store-product-actions">
@@ -414,7 +420,12 @@ export function SupplierStoreShell({ initialCatalog }: { initialCatalog: Supplie
               <span className="store-category">{previewProduct.category}</span>
               <h2>{previewProduct.name}</h2>
               <p>{previewProduct.description || "Producto disponible para pedido en Servicell."}</p>
-              <strong>{formatCurrency(previewProduct.publicPrice)}</strong>
+              <div className="store-lightbox-price">
+                <span>Antes {formatCurrency(getBeforePrice(previewProduct.publicPrice))}</span>
+                <strong>
+                  <span aria-hidden="true">🔥</span> Hoy {formatCurrency(previewProduct.publicPrice)}
+                </strong>
+              </div>
             </div>
           </div>
         </div>
