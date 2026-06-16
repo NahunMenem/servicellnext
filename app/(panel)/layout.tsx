@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { LogoutForm } from "@/components/logout-form";
 import { PanelNotice } from "@/components/panel-notice";
 import { Sidebar } from "@/components/sidebar";
@@ -17,7 +18,9 @@ export default async function PanelLayout({
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
           <LogoutForm />
         </div>
-        <PanelNotice />
+        <Suspense fallback={null}>
+          <PanelNotice />
+        </Suspense>
         {children}
       </main>
     </div>
