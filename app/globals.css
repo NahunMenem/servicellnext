@@ -1830,6 +1830,20 @@ details summary {
   overflow-wrap: anywhere;
 }
 
+.store-pickup-note {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+  color: #bae6fd;
+  background: rgba(14, 165, 233, 0.1);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
 .store-product-actions {
   min-width: 0;
   display: flex;

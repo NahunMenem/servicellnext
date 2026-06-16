@@ -269,6 +269,9 @@ export function SupplierStoreShell({ initialCatalog }: { initialCatalog: Supplie
                         </strong>
                       </div>
                     </div>
+                    <div className="store-pickup-note">
+                      <span aria-hidden="true">📍</span> Retira en Servicell
+                    </div>
                     <div className="store-product-actions">
                       <button
                         className="button"
