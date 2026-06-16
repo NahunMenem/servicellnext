@@ -1807,7 +1807,7 @@ details summary {
   gap: 0.18rem;
 }
 
-.store-price-row span {
+.store-price-row > div > span {
   color: var(--text-muted);
   font-size: 0.78rem;
 }
@@ -2055,7 +2055,7 @@ details summary {
   gap: 0.18rem;
 }
 
-.store-lightbox-price span {
+.store-lightbox-price > span {
   width: fit-content;
   color: #fca5a5;
   font-size: 0.9rem;
