@@ -4,10 +4,11 @@ import { formatCurrency } from "@/lib/utils";
 
 export default async function InicioPage() {
   const stats = await getQuickStats();
+  const appName = process.env.NEXT_PUBLIC_APP_NAME || "Servicell";
   const quickLinks = [
     ["/caja", "$", "Caja"],
     ["/registrar_venta", "+", "Ventas"],
-    ["/tienda-servicell", "T", "Tienda Servicell"],
+    ["/tienda-servicell", "T", `Tienda ${appName}`],
     ["/agregar_stock", "S", "Stock"],
     ["/reparaciones", "R", "Reparaciones"],
     ["/cotizar", "$", "Cotizar"],

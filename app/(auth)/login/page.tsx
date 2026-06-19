@@ -2,6 +2,8 @@ import { loginAction } from "@/app/actions";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Servicell";
+
 export default async function LoginPage({
   searchParams
 }: {
@@ -21,7 +23,7 @@ export default async function LoginPage({
         <section className="hero-panel">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            alt="Servicell"
+            alt={appName}
             className="hero-logo-image"
             src="https://res.cloudinary.com/dqsacd9ez/image/upload/v1775078847/servi_ivbksu.png"
           />

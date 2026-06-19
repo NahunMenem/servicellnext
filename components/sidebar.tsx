@@ -25,10 +25,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Servicell";
+
 const links = [
   { href: "/inicio", label: "Inicio", Icon: LayoutDashboard },
   { href: "/registrar_venta", label: "Registrar venta", Icon: ShoppingCart },
-  { href: "/tienda-servicell", label: "Tienda Servicell", Icon: Store },
+  { href: "/tienda-servicell", label: `Tienda ${appName}`, Icon: Store },
   { href: "/agregar_stock", label: "Stock", Icon: Package },
   { href: "/ultimas_ventas", label: "Ultimas ventas", Icon: CreditCard },
   { href: "/caja", label: "Caja", Icon: Calculator },
@@ -83,7 +85,7 @@ export function Sidebar({ username, role }: { username: string; role: string }) 
         <div className="brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            alt="Servicell"
+            alt={appName}
             className="brand-logo brand-logo-plain"
             src="https://res.cloudinary.com/dqsacd9ez/image/upload/v1775083849/logo_1_cd2ojk.png"
           />
@@ -105,7 +107,9 @@ export function Sidebar({ username, role }: { username: string; role: string }) 
           ))}
         </nav>
 
-        <div className="sidebar-footer">Servicell Next - {username}</div>
+        <div className="sidebar-footer">
+          {appName} - {username}
+        </div>
       </aside>
     </>
   );

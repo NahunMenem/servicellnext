@@ -22,6 +22,7 @@ Copiar `.env.example` a `.env.local` y completar:
 
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/servicell
+DB_SCHEMA=public
 SESSION_SECRET=change-this-secret
 FACTURADOR_URL=
 MONITOREO_API_URL=
@@ -58,6 +59,7 @@ npm run start
 
 ```env
 DATABASE_URL=${{Postgres.DATABASE_URL}}
+DB_SCHEMA=public
 SESSION_SECRET=una-clave-larga-y-segura
 FACTURADOR_URL=
 NEXT_PUBLIC_APP_NAME=Servicell
@@ -65,6 +67,21 @@ NEXT_PUBLIC_APP_NAME=Servicell
 
 5. Cargar la estructura de base usando `db/schema.sql` o restaurar una base existente.
 6. Deployar. Railway va a usar `railway.toml` para correr `npm run start`.
+
+## Segundo Cliente En La Misma Base
+
+Para crear otra instancia del sistema usando la misma base PostgreSQL, crear primero las mismas tablas dentro de otro schema. Ejemplo: `alejandro_vega`.
+
+En el servicio Railway de Alejandro Vega usar las mismas variables, cambiando estas dos:
+
+```env
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+DB_SCHEMA=alejandro_vega
+NEXT_PUBLIC_APP_NAME=Alejandro Vega
+SESSION_SECRET=otra-clave-larga-y-segura
+```
+
+El sistema consulta tablas sin prefijo, pero PostgreSQL usa `DB_SCHEMA` como `search_path`. Asi Servicell puede seguir en `public` y Alejandro Vega en `alejandro_vega` sin mezclar ventas, stock, reparaciones ni caja.
 
 ## Nota
 
