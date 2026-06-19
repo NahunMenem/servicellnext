@@ -9,6 +9,7 @@ import { logAudit } from "@/lib/audit";
 import { getPool, sql } from "@/lib/db";
 import { setLastSaleReceipt } from "@/lib/sale-receipt";
 import { ensureEgresosRepairLinkSchema, ensureSplitPaymentSchema } from "@/lib/data";
+import { ensureSistemasMensualesSchema } from "@/lib/sistemas-mensuales";
 import { getArgentinaNowParts } from "@/lib/utils";
 
 function getString(formData: FormData, key: string) {
@@ -17,6 +18,45 @@ function getString(formData: FormData, key: string) {
 
 function getNumber(formData: FormData, key: string) {
   return Number(getString(formData, key) || 0);
+}
+
+function getOptionalString(formData: FormData, key: string) {
+  return getString(formData, key) || null;
+}
+
+function getRequiredDate(formData: FormData, key: string) {
+  const value = getString(formData, key);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error(`Fecha invalida para ${key}.`);
+  }
+  return value;
+}
+
+function getPaidMonth(formData: FormData) {
+  const value = getString(formData, "mes_pagado");
+  if (/^\d{4}-\d{2}$/.test(value)) {
+    return `${value}-01`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  throw new Error("Mes pagado invalido.");
+}
+
+function normalizeSystemSlug(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+}
+
+function validateDbSchema(value: string) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
+    throw new Error("Schema invalido. Usa letras, numeros y guion bajo.");
+  }
+  return value;
 }
 
 function paymentAmount(total: number, amount: number) {
@@ -1019,27 +1059,142 @@ export async function cancelRepairSaleAction(formData: FormData) {
   redirect(buildSuccessRedirect("/ultimas_ventas", "Reparacion anulada con exito."));
 }
 
-export async function facturarAction(formData: FormData) {
-  await requireSession();
-  const facturador = process.env.FACTURADOR_URL;
-  if (!facturador) {
-    redirect(buildErrorRedirect("/facturar", "Falta configurar FACTURADOR_URL en el entorno."));
+export async function createSistemaMensualAction(formData: FormData) {
+  const session = await requireAdminSession();
+  await ensureSistemasMensualesSchema();
+
+  const nombreCliente = getString(formData, "nombre_cliente");
+  const sistemaSlug = normalizeSystemSlug(getString(formData, "sistema_slug") || nombreCliente);
+  const dbSchema = validateDbSchema(getString(formData, "db_schema"));
+  const montoMensual = getNumber(formData, "monto_mensual");
+  const fechaVencimiento = getRequiredDate(formData, "fecha_vencimiento");
+
+  await sql(
+    `
+      INSERT INTO public.sistemas_mensuales
+      (nombre_cliente, sistema_slug, db_schema, url_sistema, monto_mensual, fecha_vencimiento, activo, notas)
+      VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
+    `,
+    [
+      nombreCliente,
+      sistemaSlug,
+      dbSchema,
+      getOptionalString(formData, "url_sistema"),
+      montoMensual,
+      fechaVencimiento,
+      getOptionalString(formData, "notas")
+    ]
+  );
+
+  await safeAudit({
+    username: session.username,
+    action: "crear",
+    entityType: "sistema_mensual",
+    summary: `Creo sistema mensual para ${nombreCliente}.`,
+    detail: JSON.stringify({ sistemaSlug, dbSchema, montoMensual, fechaVencimiento })
+  });
+  revalidatePath("/sistemas_mensuales");
+  redirect(buildSuccessRedirect("/sistemas_mensuales", "Sistema mensual creado."));
+}
+
+export async function updateSistemaMensualAction(formData: FormData) {
+  const session = await requireAdminSession();
+  await ensureSistemasMensualesSchema();
+
+  const sistemaId = getNumber(formData, "sistema_id");
+  const nombreCliente = getString(formData, "nombre_cliente");
+  const sistemaSlug = normalizeSystemSlug(getString(formData, "sistema_slug") || nombreCliente);
+  const dbSchema = validateDbSchema(getString(formData, "db_schema"));
+  const montoMensual = getNumber(formData, "monto_mensual");
+  const fechaVencimiento = getRequiredDate(formData, "fecha_vencimiento");
+  const activo = getString(formData, "activo") === "true";
+
+  await sql(
+    `
+      UPDATE public.sistemas_mensuales
+      SET nombre_cliente = $2,
+          sistema_slug = $3,
+          db_schema = $4,
+          url_sistema = $5,
+          monto_mensual = $6,
+          fecha_vencimiento = $7,
+          activo = $8,
+          notas = $9,
+          updated_at = NOW()
+      WHERE id = $1
+    `,
+    [
+      sistemaId,
+      nombreCliente,
+      sistemaSlug,
+      dbSchema,
+      getOptionalString(formData, "url_sistema"),
+      montoMensual,
+      fechaVencimiento,
+      activo,
+      getOptionalString(formData, "notas")
+    ]
+  );
+
+  await safeAudit({
+    username: session.username,
+    action: "actualizar",
+    entityType: "sistema_mensual",
+    entityId: sistemaId,
+    summary: `Actualizo sistema mensual ${nombreCliente}.`,
+    detail: JSON.stringify({ sistemaSlug, dbSchema, montoMensual, fechaVencimiento, activo })
+  });
+  revalidatePath("/sistemas_mensuales");
+  redirect(buildSuccessRedirect("/sistemas_mensuales", "Sistema mensual actualizado."));
+}
+
+export async function registerSistemaPagoAction(formData: FormData) {
+  const session = await requireAdminSession();
+  await ensureSistemasMensualesSchema();
+
+  const sistemaId = getNumber(formData, "sistema_id");
+  const mesPagado = getPaidMonth(formData);
+  const monto = getNumber(formData, "monto");
+  const fechaPago = getString(formData, "fecha_pago") || getRequiredDate(formData, "fecha_pago_default");
+  const nuevoVencimiento = getString(formData, "nuevo_vencimiento");
+
+  await sql(
+    `
+      INSERT INTO public.sistema_pagos (sistema_id, mes_pagado, monto, fecha_pago, observacion)
+      VALUES ($1, $2::date, $3::numeric, $4::date, $5)
+    `,
+    [sistemaId, mesPagado, monto, fechaPago, getOptionalString(formData, "observacion")]
+  );
+
+  if (nuevoVencimiento) {
+    await sql(
+      `
+        UPDATE public.sistemas_mensuales
+        SET fecha_vencimiento = $2::date, updated_at = NOW()
+        WHERE id = $1
+      `,
+      [sistemaId, nuevoVencimiento]
+    );
+  } else {
+    await sql(
+      `
+        UPDATE public.sistemas_mensuales
+        SET fecha_vencimiento = (GREATEST(fecha_vencimiento, CURRENT_DATE) + INTERVAL '1 month')::date,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [sistemaId]
+    );
   }
 
-  try {
-    await fetch(facturador!, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cuit: getString(formData, "cuit"),
-        monto: getNumber(formData, "monto"),
-        descripcion: getString(formData, "descripcion")
-      }),
-      cache: "no-store"
-    });
-  } catch {
-    redirect(buildErrorRedirect("/facturar", "No se pudo contactar el bot externo."));
-  }
-
-  redirect(buildSuccessRedirect("/facturar", "Solicitud enviada al bot de facturacion."));
+  await safeAudit({
+    username: session.username,
+    action: "pago",
+    entityType: "sistema_mensual",
+    entityId: sistemaId,
+    summary: `Registro pago mensual de sistema.`,
+    detail: JSON.stringify({ mesPagado, monto, fechaPago, nuevoVencimiento: nuevoVencimiento || "auto" })
+  });
+  revalidatePath("/sistemas_mensuales");
+  redirect(buildSuccessRedirect("/sistemas_mensuales", "Pago registrado y vencimiento actualizado."));
 }

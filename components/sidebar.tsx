@@ -9,11 +9,11 @@ import {
   BarChart3,
   Calculator,
   CreditCard,
-  FileSpreadsheet,
   Store,
   LayoutDashboard,
   Menu,
   Package,
+  Server,
   Shield,
   ShoppingCart,
   Star,
@@ -40,7 +40,7 @@ const links = [
   { href: "/productos_mas_vendidos", label: "Top productos", Icon: Star },
   { href: "/productos_por_agotarse", label: "Por agotarse", Icon: AlertTriangle },
   { href: "/cotizar", label: "Cotizar", Icon: BadgeDollarSign },
-  { href: "/facturar", label: "Facturar", Icon: FileSpreadsheet },
+  { href: "/sistemas_mensuales", label: "Sistemas mensuales", Icon: Server },
   { href: "/asignacion_manual", label: "Asignacion manual", Icon: Stethoscope }
 ];
 
