@@ -26,6 +26,24 @@ function toCents(amount: number) {
   return Math.round(amount * 100);
 }
 
+async function syncSerialSequence(
+  client: Awaited<ReturnType<ReturnType<typeof getPool>["connect"]>>,
+  tableName: string,
+  columnName = "id"
+) {
+  await client.query(
+    `
+      SELECT setval(
+        pg_get_serial_sequence($1, $2),
+        GREATEST(COALESCE(MAX(id), 0) + 1, 1),
+        false
+      )
+      FROM ${tableName}
+    `,
+    [tableName, columnName]
+  );
+}
+
 function buildRedirect(path: string, params?: Record<string, string | undefined>) {
   const queryParams = new URLSearchParams();
   if (params) {
@@ -240,6 +258,10 @@ export async function registerSaleAction(formData: FormData) {
 
   try {
     await client.query("BEGIN");
+    await syncSerialSequence(client, "ventas");
+    await syncSerialSequence(client, "reparaciones");
+    await syncSerialSequence(client, "venta_pagos");
+    await syncSerialSequence(client, "reparacion_pagos");
     for (const item of cart) {
       const itemTotalCents = toCents(item.precio * item.cantidad);
       const pago1Asignado = Math.min(remainingPago1, itemTotalCents);
