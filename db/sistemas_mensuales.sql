@@ -24,6 +24,31 @@ ADD COLUMN IF NOT EXISTS notas TEXT,
 ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW();
 
+
+DO $$
+DECLARE
+  legacy_column TEXT;
+BEGIN
+  FOREACH legacy_column IN ARRAY ARRAY[
+    'cliente',
+    'slug',
+    'schema',
+    'url',
+    'monto',
+    'estado',
+    'fecha_pago'
+  ] LOOP
+    IF EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'sistemas_mensuales'
+        AND column_name = legacy_column
+    ) THEN
+      EXECUTE format('ALTER TABLE public.sistemas_mensuales ALTER COLUMN %I DROP NOT NULL', legacy_column);
+    END IF;
+  END LOOP;
+END $$;
 UPDATE public.sistemas_mensuales
 SET nombre_cliente = COALESCE(nombre_cliente, 'Sin nombre'),
     sistema_slug = COALESCE(sistema_slug, 'sistema-' || id::text),
@@ -58,7 +83,7 @@ ADD COLUMN IF NOT EXISTS fecha_pago DATE NOT NULL DEFAULT CURRENT_DATE,
 ADD COLUMN IF NOT EXISTS observacion TEXT,
 ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT NOW();
 
-DO $$
+DO $$$
 BEGIN
   IF NOT EXISTS (
     SELECT 1

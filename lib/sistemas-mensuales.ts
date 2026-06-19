@@ -57,6 +57,32 @@ export async function ensureSistemasMensualesSchema() {
   `);
 
   await sql(`
+    DO $$
+    DECLARE
+      legacy_column TEXT;
+    BEGIN
+      FOREACH legacy_column IN ARRAY ARRAY[
+        'cliente',
+        'slug',
+        'schema',
+        'url',
+        'monto',
+        'estado',
+        'fecha_pago'
+      ] LOOP
+        IF EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'sistemas_mensuales'
+            AND column_name = legacy_column
+        ) THEN
+          EXECUTE format('ALTER TABLE public.sistemas_mensuales ALTER COLUMN %I DROP NOT NULL', legacy_column);
+        END IF;
+      END LOOP;
+    END $$;
+  `);
+  await sql(`
     UPDATE public.sistemas_mensuales
     SET nombre_cliente = COALESCE(nombre_cliente, 'Sin nombre'),
         sistema_slug = COALESCE(sistema_slug, 'sistema-' || id::text),
