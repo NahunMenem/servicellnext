@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { PoolClient } from "pg";
 import { clearCart, getCart, setCart } from "@/lib/cart";
 import { loginWithPassword, logout, requireSession } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
@@ -26,11 +27,7 @@ function toCents(amount: number) {
   return Math.round(amount * 100);
 }
 
-async function syncSerialSequence(
-  client: Awaited<ReturnType<ReturnType<typeof getPool>["connect"]>>,
-  tableName: string,
-  columnName = "id"
-) {
+async function syncSerialSequence(client: PoolClient, tableName: string, columnName = "id") {
   await client.query(
     `
       SELECT setval(
