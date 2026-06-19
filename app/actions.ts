@@ -318,10 +318,10 @@ export async function registerSaleAction(formData: FormData) {
             INSERT INTO ventas (
               producto_id, cantidad, fecha, nombre_manual, precio_manual,
               tipo_pago, dni_cliente, nombre_producto, precio_unitario, costo_unitario
-            ) VALUES (NULL, $1, NOW(), $2, $3, $4, $5, $2, $3, 0)
+            ) VALUES (NULL, $1::integer, NOW(), $2::text, $3::numeric, $4::text, $5::text, $6::text, $7::numeric, 0)
             RETURNING id
           `,
-          [item.cantidad, item.nombre, item.precio, paymentLabel, dniCliente || null]
+          [item.cantidad, item.nombre, item.precio, paymentLabel, dniCliente || null, item.nombre, item.precio]
         );
 
         if (pago1Asignado > 0 && tipoPago1) {
