@@ -285,7 +285,7 @@ export async function registerSaleAction(formData: FormData) {
         }
 
         await client.query("UPDATE productos SET stock = stock - $1 WHERE id = $2", [item.cantidad, item.id]);
-      } else {
+      } else if (item.sourceType === "equipo") {
         const reparacion = await client.query<{ id: number }>(
           `
             INSERT INTO reparaciones (nombre_servicio, precio, cantidad, tipo_pago, dni_cliente, fecha)
@@ -312,6 +312,31 @@ export async function registerSaleAction(formData: FormData) {
         if (item.sourceType === "equipo" && item.sourceId) {
           await client.query("UPDATE equipos SET estado = 'Retirado' WHERE id = $1", [item.sourceId]);
         }
+      } else {
+        const venta = await client.query<{ id: number }>(
+          `
+            INSERT INTO ventas (
+              producto_id, cantidad, fecha, nombre_manual, precio_manual,
+              tipo_pago, dni_cliente, nombre_producto, precio_unitario, costo_unitario
+            ) VALUES (NULL, $1, NOW(), $2, $3, $4, $5, $2, $3, 0)
+            RETURNING id
+          `,
+          [item.cantidad, item.nombre, item.precio, paymentLabel, dniCliente || null]
+        );
+
+        if (pago1Asignado > 0 && tipoPago1) {
+          await client.query(
+            "INSERT INTO venta_pagos (venta_id, tipo_pago, monto) VALUES ($1, $2, $3)",
+            [venta.rows[0].id, tipoPago1, pago1Asignado / 100]
+          );
+        }
+
+        if (pago2Asignado > 0 && tipoPago2) {
+          await client.query(
+            "INSERT INTO venta_pagos (venta_id, tipo_pago, monto) VALUES ($1, $2, $3)",
+            [venta.rows[0].id, tipoPago2, pago2Asignado / 100]
+          );
+        }
       }
     }
 
@@ -322,8 +347,9 @@ export async function registerSaleAction(formData: FormData) {
     await client.query("COMMIT");
     await setLastSaleReceipt(receiptPayload);
     await clearCart();
-  } catch {
+  } catch (error) {
     await client.query("ROLLBACK");
+    console.error("No se pudo registrar la venta", error);
     redirect(buildErrorRedirect("/registrar_venta", "No se pudo registrar la venta."));
   } finally {
     client.release();
