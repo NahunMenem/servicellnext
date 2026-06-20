@@ -63,6 +63,7 @@ export async function ensureSistemasMensualesSchema() {
     BEGIN
       FOREACH legacy_column IN ARRAY ARRAY[
         'cliente',
+        'sistema',
         'slug',
         'schema',
         'url',
