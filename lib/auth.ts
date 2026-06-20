@@ -54,7 +54,23 @@ export async function loginWithPassword(username: string, password: string) {
 
   try {
     const result = await sql<{ username: string; password: string; role: string }>(
-      "SELECT username, password, role FROM usuarios WHERE username = $1 LIMIT 1",
+      `
+        SELECT username, password, role
+        FROM usuarios
+        WHERE LOWER(username) = LOWER($1)
+
+        UNION ALL
+
+        SELECT username, password, role
+        FROM public.usuarios_bunker
+        WHERE LOWER(username) = LOWER($1)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM usuarios
+            WHERE LOWER(username) = LOWER($1)
+          )
+        LIMIT 1
+      `,
       [username]
     );
     rows = result.rows;
